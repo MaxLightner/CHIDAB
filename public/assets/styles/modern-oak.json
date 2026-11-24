@@ -1,0 +1,18 @@
+{
+  "id": "modern-oak",
+  "title": "بلوط طبیعی مدرن",
+  "subtitle": "نما چوب بلوط طبیعی، دستگیره مخفی، کاشی تراورتن و صفحه مرمر سفید",
+  "image": "./assets/styles/modern-oak.webp",
+  "designStyle": "modern",
+  "cabinetFinish": "natural-oak",
+  "backsplashFinish": "warm-travertine",
+  "countertopFinish": "calacatta-top",
+  "doorStyle": "flat",
+  "handleStyle": "f-profile",
+  "defaultHoodKind": "hidden",
+  "roughness": {
+    "cabinet": 0.56,
+    "countertop": 0.26,
+    "backsplash": 0.53
+  }
+}

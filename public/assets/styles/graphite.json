@@ -1,0 +1,18 @@
+{
+  "id": "graphite",
+  "title": "گرافیت آنتراسیت",
+  "subtitle": "ذغالی مات یکدست، صفحه بتنی طوسی، کاشی ترازو و هود مخفی",
+  "image": "./assets/styles/graphite.webp",
+  "designStyle": "modern",
+  "cabinetFinish": "charcoal",
+  "backsplashFinish": "terrazzo-grey",
+  "countertopFinish": "concrete-grey",
+  "doorStyle": "flat",
+  "handleStyle": "handleless",
+  "defaultHoodKind": "hidden",
+  "roughness": {
+    "cabinet": 0.57,
+    "countertop": 0.53,
+    "backsplash": 0.47
+  }
+}
