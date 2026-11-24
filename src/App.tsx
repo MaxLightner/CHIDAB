@@ -3194,7 +3194,8 @@ export default function App() {
     const center=fixtures.length?(fixtures[0].xCm-activeWall.x1Cm)*Math.cos(a)+(fixtures[0].yCm-activeWall.y1Cm)*Math.sin(a):activeWall.length/2;
     const offset=((center-d.width/2)%(d.width+d.groutMm/10)+(d.width+d.groutMm/10))%(d.width+d.groutMm/10);
     const nd={...d,offsetX:offset,decor:{}};const cells=wallCells(activeWall,nd);
-    nd.decor=Object.fromEntries(cells.map(c=>[c.key,Math.abs(c.x+c.width/2-center)<d.width*.51]));
+    const style=project.bathBrief?.style||'modern';
+    nd.decor=Object.fromEntries(cells.map(c=>[c.key,style==='minimal'?false:style==='classic'?Math.abs(c.y+c.height/2-activeWall.height*.45)<d.height*.51:Math.abs(c.x+c.width/2-center)<d.width*.51]));
     commitState(p=>({...p,walls:p.walls.map(w=>w.id===activeWall.id?{...w,tileDesign:nd}:w)}),true);showToast('طرح آزمایشی دکور بر اساس محور تجهیز یا دیوار اعمال شد');};
   const dialogOpen = Boolean(briefDialog || measurement || confirmModal || hiddenHandleWarnModal || stylePromptModal?.open || settingsOpen || styleGalleryOpen || auditOpen);
   const setBoxAppearance = (patch: { color?: string; texture?: CabinetTextureId } & SurfaceFinishPatch) => {
@@ -3319,7 +3320,7 @@ export default function App() {
         onMoveUnit={handleMoveUnit}
         cameraToolbarRef={setCameraToolbarHost}
       />
-      <ChidabToolbar settings={project.settings} wall={activeWall} brush={brush} onBrush={b=>{setBrush(b);setBathKind(null);setBathMoving(false);setBathHover(null);setTool('select');if(viewMode!=='2d')handleSwitchViewMode('2d');}} onSettings={value=>commitState(p=>({...p,settings:{...DEFAULT_PROJECT_SETTINGS,...p.settings,chidabTiles:value}}),true)} onWallDesign={patch=>{if(activeWall)commitState(p=>({...p,walls:p.walls.map(w=>w.id===activeWall.id?{...w,tileDesign:{...wallDesign(w,p.settings),...patch}}:w)}),true);}} onSmart={smartTiles} onStyle={()=>setBriefDialog('style')} onWizard={()=>setBriefDialog('wizard')}/>
+      <ChidabToolbar settings={project.settings} wall={activeWall} brush={brush} onBrush={b=>{setBrush(b);setBathKind(null);setBathMoving(false);setBathHover(null);setTool('select');if(viewMode!=='2d')handleSwitchViewMode('2d');}} onSettings={value=>commitState(p=>({...p,settings:{...DEFAULT_PROJECT_SETTINGS,...p.settings,chidabTiles:value},walls:p.walls.map(w=>w.id===activeWall?.id&&w.tileDesign?{...w,tileDesign:{...w.tileDesign,groutMm:value.groutMm}}:w)}),true)} onWallDesign={patch=>{if(activeWall)commitState(p=>({...p,walls:p.walls.map(w=>w.id===activeWall.id?{...w,tileDesign:{...wallDesign(w,p.settings),...patch}}:w)}),true);}} onSmart={smartTiles} onStyle={()=>setBriefDialog('style')} onWizard={()=>setBriefDialog('wizard')}/>
       <div className="text-xs text-slate-500 px-2 text-left" dir="ltr">CHIDAB 0.22</div>
       </div>
 

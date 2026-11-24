@@ -906,11 +906,33 @@ export function buildKitchen3DScene(
       }
       uv.needsUpdate = true;
       const floorMesh = new THREE.Mesh(geo, matFloor);
-      floorMesh.position.y = -0.012;
+      floorMesh.position.y = -0.001;
+      matFloor.map=null;matFloor.color.set(tileConfig.groutColor);
       floorMesh.receiveShadow = true;
       floorMesh.userData = { kind: 'floor' };
       root.add(floorMesh);
       bounds.expandByObject(floorMesh);
+      const fw=tileConfig.floorWidth,fh=tileConfig.floorHeight,gap=tileConfig.groutMm/10,px=fw+gap,py=fh+gap;
+      const x0=Math.min(...vertices.map(p=>p.x)),z0=Math.min(...vertices.map(p=>p.y)),x1=Math.max(...vertices.map(p=>p.x)),z1=Math.max(...vertices.map(p=>p.y));
+      const floorTileMat=new THREE.MeshPhysicalMaterial({color:tileConfig.floorColor,...readSurfaceFinish(project.settings,3),transparent:(opts.floorOpacity??1)<1,opacity:opts.floorOpacity??1,depthWrite:(opts.floorOpacity??1)>=1});
+      floorTileMat.userData.sceneReflection=true;
+      type Pt={x:number;y:number};
+      const clip=(poly:Pt[],axis:'x'|'y',edge:number,keepGreater:boolean):Pt[]=>{
+        const out:Pt[]=[];if(!poly.length)return out;const inside=(p:Pt)=>keepGreater?p[axis]>=edge:p[axis]<=edge;
+        for(let j=0;j<poly.length;j++){const a=poly[(j+poly.length-1)%poly.length],b=poly[j],ia=inside(a),ib=inside(b);
+          if(ia!==ib){const t=(edge-a[axis])/(b[axis]-a[axis]);out.push({x:a.x+t*(b.x-a.x),y:a.y+t*(b.y-a.y)});}
+          if(ib)out.push(b);
+        }return out;
+      };
+      const maxPieces=10000;let count=0;
+      for(let x=x0;x<x1&&count<maxPieces;x+=px)for(let z=z0;z<z1&&count<maxPieces;z+=py){
+        const p=clip(clip(clip(clip(vertices,'x',x+gap/2,true),'x',x+gap/2+fw,false),'y',z+gap/2,true),'y',z+gap/2+fh,false);
+        if(p.length<3)continue;
+        const shape=new THREE.Shape();shape.moveTo(p[0].x*CM,-p[0].y*CM);for(const v of p.slice(1))shape.lineTo(v.x*CM,-v.y*CM);shape.closePath();
+        const tileGeo=new THREE.ExtrudeGeometry(shape,{depth:.00085,bevelEnabled:true,bevelSize:.0001,bevelThickness:.000075,bevelSegments:1,steps:1});
+        tileGeo.rotateX(-Math.PI/2);
+        const tile=new THREE.Mesh(tileGeo,floorTileMat);tile.position.y=-.000925;tile.receiveShadow=true;tile.userData={kind:'floor'};root.add(tile);count++;
+      }
     }
   }
 
@@ -1321,9 +1343,9 @@ export function buildKitchen3DScene(
     const material=new THREE.MeshStandardMaterial({color:BATH_CATALOG[item.kind].color,roughness:.35,transparent:item.kind==='glass',opacity:item.kind==='glass'?.28:1});
     const box=(ww:number,hh:number,dd:number,x:number,y:number,z:number)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(ww,hh,dd),material);m.position.set(x,y,z);m.castShadow=item.kind!=='glass';m.receiveShadow=true;g.add(m);};
     const oval=(ww:number,hh:number,dd:number,y:number,z:number)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),material);m.scale.set(ww/2,hh/2,dd/2);m.position.set(0,y,z);m.castShadow=true;g.add(m);};
-    if(item.kind==='toilet'){box(w*.65,h*.65,d*.3,0,h*.62,-d*.30);oval(w,h*.48,d*.72,h*.24,d*.10);}
-    else if(item.kind==='vanity'){box(w,h*.35,d,0,h*.825,0);oval(w*.8,h*.8,d*.85,h*.4,0);}
-    else if(item.kind==='shower'){box(.025,h,.025,0,h/2,-d/2+.025);box(.22,.035,.22,0,h,-d/2+.1);}
+    if(item.kind==='toilet'){if(item.model===1){oval(w,h*.52,d*.78,h*.55,d*.10);box(w*.75,h*.3,d*.28,0,h*.58,-d*.32);}else{box(w*.65,h*.65,d*.3,0,h*.62,-d*.30);oval(w,h*.48,d*.72,h*.24,d*.10);}}
+    else if(item.kind==='vanity'){if(item.model===1){oval(w,h,d,h*.5,0);}else if(item.model===2){box(w,h,d,0,h/2,0);}else{box(w,h*.35,d,0,h*.825,0);oval(w*.8,h*.8,d*.85,h*.4,0);}}
+    else if(item.kind==='shower'){box(.025,h,.025,0,h/2,-d/2+.025);if(item.model===1){const head=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.025,24),material);head.position.set(0,h,-d/2+.16);g.add(head);}else box(item.model===2?.3:.22,.035,.22,0,h,-d/2+.1);}
     else if(item.kind==='tub'||item.kind==='jacuzzi'){box(w,h*.12,d,0,h*.06,0);box(w,h,d*.06,0,h/2,-d*.47);box(w,h,d*.06,0,h/2,d*.47);box(w*.05,h,d,-w*.475,h/2,0);box(w*.05,h,d,w*.475,h/2,0);}
     else if(item.kind==='squat'){oval(w,h,d,h/2,0);}
     else box(w,h,d,0,h/2,0);
