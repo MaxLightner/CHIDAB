@@ -1,3 +1,4 @@
+import { getChidabTiles, tilePitch } from './chidabTiles';
 import { fitHandleLengthCm } from './handleGeometry';
 import * as THREE from 'three';
 import {
@@ -728,7 +729,23 @@ export function buildKitchen3DScene(
 
   // Shared procedural material pack (finishes, gradient+bevel normal doors, tiles, countertops)
   const matPack = createKitchenMaterialPack(project, opts.onTextureReady);
-  const floorTex = createFloorTileTexture();
+  const tileConfig = getChidabTiles(project.settings);
+  const makeTileTexture = (w:number,h:number,color:string) => {
+    const canvas = document.createElement('canvas'); canvas.width=1024; canvas.height=1024;
+    const ctx=canvas.getContext('2d')!;
+    const px=tileConfig.groutMm/10/tilePitch(w,tileConfig.groutMm)*1024;
+    const py=tileConfig.groutMm/10/tilePitch(h,tileConfig.groutMm)*1024;
+    ctx.fillStyle=tileConfig.groutColor; ctx.fillRect(0,0,1024,1024);
+    ctx.fillStyle=color; ctx.fillRect(px/2,py/2,1024-px,1024-py);
+    const tex=new THREE.CanvasTexture(canvas);
+    tex.colorSpace=THREE.SRGBColorSpace; tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+    tex.repeat.set(100/tilePitch(w,tileConfig.groutMm),100/tilePitch(h,tileConfig.groutMm));
+    tex.anisotropy=8;
+    return tex;
+  };
+  const floorTex = makeTileTexture(tileConfig.floorWidth,tileConfig.floorHeight,tileConfig.floorColor);
+  const wallTex = makeTileTexture(tileConfig.wallWidth,tileConfig.wallHeight,tileConfig.wallColor);
+  const tileWallMaterial = new THREE.MeshStandardMaterial({ map:wallTex,roughness:0.62,metalness:0 });
   const matFloor = new THREE.MeshPhysicalMaterial({
     map: floorTex,
     ...readSurfaceFinish(project.settings, 3),
@@ -884,7 +901,7 @@ export function buildKitchen3DScene(
       const pos = geo.getAttribute('position');
       const uv = geo.getAttribute('uv');
       for (let i = 0; i < pos.count; i++) {
-        uv.setXY(i, pos.getX(i), pos.getZ(i));
+        uv.setXY(i, pos.getX(i) - minX, pos.getZ(i) - minZ);
       }
       uv.needsUpdate = true;
       const floorMesh = new THREE.Mesh(geo, matFloor);
@@ -964,7 +981,7 @@ export function buildKitchen3DScene(
     });
     // Position extrusion strictly behind z=0 relative to normalSign!
     wallGeo.translate(0, 0, normalSign > 0 ? -wallThick : 0);
-    const wallMesh = new THREE.Mesh(wallGeo, isWallActive ? matWallActive : matWall);
+    const wallMesh = new THREE.Mesh(wallGeo, [tileWallMaterial, matWall]);
     wallMesh.receiveShadow = true;
     wallMesh.castShadow = true;
     wallMesh.userData = { kind: 'wall', wallId: wall.id } as Scene3DHitData;

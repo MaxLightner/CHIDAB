@@ -305,7 +305,7 @@ export const WALL_DOUBLE_UPPER_ELEV_CM = WALL_LOWER_ELEV_CM + WALL_DOUBLE_LOWER_
 export const COUNTERTOP_THICKNESS_OPTIONS = [3, 5, 7] as const;
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
-  wallHeightCm: 265,
+  wallHeightCm: 220,
   baseHeightCm: 86,
   plinthCm: 10,
   countertopCm: 3,

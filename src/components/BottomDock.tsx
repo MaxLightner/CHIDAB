@@ -25,6 +25,7 @@ import { DiningSeats, FloorFurnitureKind, ToolId } from '../cad/types';
 
 interface BottomDockProps {
   activeTool: ToolId;
+  onOpenTiles?: () => void;
   diningSeats: DiningSeats;
   diningShape: 'round' | 'rect';
   onDiningShape: (shape: 'round' | 'rect') => void;
@@ -43,7 +44,7 @@ interface BottomDockProps {
   onToggleUnderLight: () => void;
 }
 
-export const BottomDock: React.FC<BottomDockProps> = ({ activeTool, onSelectTool }) => {
+export const BottomDock: React.FC<BottomDockProps> = ({ activeTool, onSelectTool, onOpenTiles }) => {
   const tools: { id: ToolId; label: string; Icon: React.ElementType }[] = [
     { id: 'select', label: 'انتخاب', Icon: MousePointer2 },
     { id: 'wall', label: 'دیوار', Icon: BrickWall },
@@ -55,6 +56,7 @@ export const BottomDock: React.FC<BottomDockProps> = ({ activeTool, onSelectTool
         aria-pressed={activeTool === id} className={'h-10 px-3 rounded-lg border font-bold inline-flex items-center gap-2 whitespace-nowrap '+(activeTool===id?'bg-indigo-600 text-white':'bg-white text-slate-800')}>
         <Icon className="w-4 h-4"/><span>{label}</span>
       </button>)}
+      <button type="button" onClick={onOpenTiles} className="h-10 px-3 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-800 font-bold inline-flex items-center gap-2 whitespace-nowrap"><LayoutGrid className="w-4 h-4"/>کاشی و سرامیک</button>
     </nav>
   </div>;
 };

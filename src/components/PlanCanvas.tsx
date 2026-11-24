@@ -1,3 +1,4 @@
+import { getChidabTiles, tilePitch } from '../cad/chidabTiles';
 import { svgPickTargets, type OfferSelection, type PickCandidate } from './SelectionPicker';
 import { diningLayout, snapDiningPosition, nextDiningSeats } from '../cad/diningLayout';
 import type { DiningSeats, FloorFurniture, FloorFurnitureKind } from '../cad/types';
@@ -1365,6 +1366,10 @@ export const PlanCanvas: React.FC<PlanCanvasProps> = ({
   const { width: pw, height: ph } = planSize;
   const viewBox = `${-pw / 2 - pan.x} ${-ph / 2 - pan.y} ${pw} ${ph}`;
   const s = planScale;
+  const tiles = getChidabTiles(settings);
+  const tileFloor = deriveFloorPolygon(displayWalls);
+  const tileX = tileFloor.length ? Math.min(...tileFloor.map(p=>p.x)) : 0;
+  const tileY = tileFloor.length ? Math.min(...tileFloor.map(p=>p.y)) : 0;
 
   const sweepPreviewData = useMemo(() => {
     const hoverWall = !cabSweep.active && tool === 'cab-draw' && (drawBoxKind === 'base' || touchTarget)
@@ -1521,8 +1526,9 @@ export const PlanCanvas: React.FC<PlanCanvasProps> = ({
         }}
       >
         <defs>
-          <pattern id="plan-room-tiles" x={0} y={0} width={100 * s} height={100 * s} patternUnits="userSpaceOnUse">
-            <rect width={100 * s} height={100 * s} fill="#ffffff" stroke="#d9dddf" strokeWidth={Math.max(0.7, s * 0.4)} />
+          <pattern id="plan-room-tiles" x={tileX*s} y={tileY*s} width={tilePitch(tiles.floorWidth,tiles.groutMm)*s} height={tilePitch(tiles.floorHeight,tiles.groutMm)*s} patternUnits="userSpaceOnUse">
+            <rect width={tilePitch(tiles.floorWidth,tiles.groutMm)*s} height={tilePitch(tiles.floorHeight,tiles.groutMm)*s} fill={tiles.groutColor}/>
+            <rect x={tiles.groutMm/20*s} y={tiles.groutMm/20*s} width={tiles.floorWidth*s} height={tiles.floorHeight*s} fill={tiles.floorColor}/>
           </pattern>
         </defs>
         {deriveFloorPolygon(displayWalls).length >= 3 && (

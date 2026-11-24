@@ -306,6 +306,7 @@ export type EquipmentFinish = 'silver' | 'white' | 'black';
 export type CountertopEdgeProfile = 'square' | 'round';
 
 export interface ProjectSettings {
+  chidabTiles?: { wallWidth: number; wallHeight: number; floorWidth: number; floorHeight: number; groutMm: number; wallColor: string; floorColor: string; groutColor: string; };
   wallHeightCm: number;
   baseHeightCm: number;
   plinthCm: number;

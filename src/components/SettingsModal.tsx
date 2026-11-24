@@ -111,7 +111,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </label>
               ))}
               <label className="block">
-                شدت مشترک سه نور مستطیلی سقف
+                شدت نور مرکزی سقف
                 <input aria-label="نور مستطیلی سقف" type="number" dir="ltr" min={0} max={100} step={0.05}
                   value={form.ceilingAreaIntensity ?? form.ceilingLightIntensities?.[0] ?? 12}
                   onChange={event => setForm(prev => ({ ...prev,

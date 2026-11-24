@@ -1,3 +1,4 @@
+import { getChidabTiles, tilePitch } from '../cad/chidabTiles';
 import { getCabinetLighting } from '../cad/cabinetLighting';
 import { svgPickTargets, type OfferSelection, type PickCandidate } from './SelectionPicker';
 import { findFrontCut } from '../cad/frontCut';
@@ -109,6 +110,7 @@ const CAB_DRAW_KIND_ORDER: BoxKind[] = ['base', 'wall', 'wall-deep', 'tall', 'cl
 const HANDLE_STYLE_ORDER = HANDLE_STYLES.map(style => style.id);
 
 interface FrontCanvasProps {
+  tileSettings?: import('../cad/types').ProjectSettings;
   offerSelection: OfferSelection;
   onBeginDrag: () => void;
   onCancelDrag: () => void;
@@ -358,6 +360,7 @@ type DragOp =
     };
 
 export const FrontCanvas: React.FC<FrontCanvasProps> = ({
+  tileSettings,
   offerSelection,
   onBeginDrag,
   onCancelDrag,
@@ -597,6 +600,7 @@ export const FrontCanvas: React.FC<FrontCanvasProps> = ({
   const viewBox = `${-pw / 2 - pan.x} ${-ph / 2 - pan.y} ${pw} ${ph}`;
 
   const s = pxPerCm;
+  const tiles = getChidabTiles(tileSettings);
   const wallW = (wall?.length || 300) * s;
   const wallH = (wall?.height || 265) * s;
   const originX = -wallW / 2;
@@ -3608,6 +3612,7 @@ export const FrontCanvas: React.FC<FrontCanvasProps> = ({
         }}
       >
         <defs>
+          <pattern id="chidab-wall-tiles" x={originX} y={floorY} width={tilePitch(tiles.wallWidth,tiles.groutMm)*s} height={tilePitch(tiles.wallHeight,tiles.groutMm)*s} patternUnits="userSpaceOnUse"><rect width={tilePitch(tiles.wallWidth,tiles.groutMm)*s} height={tilePitch(tiles.wallHeight,tiles.groutMm)*s} fill={tiles.groutColor}/><rect x={tiles.groutMm/20*s} y={tiles.groutMm/20*s} width={tiles.wallWidth*s} height={tiles.wallHeight*s} fill={tiles.wallColor}/></pattern>
           <linearGradient id="fridge-metal-grad" x1="0%" y1="0%" x2="100%" y2="15%">
             {equipmentFinish === 'white' ? (
               <>
@@ -3717,8 +3722,8 @@ export const FrontCanvas: React.FC<FrontCanvasProps> = ({
               y={floorY - wallH}
               width={wallW}
               height={wallH}
-              fill="#ffffff"
-              fillOpacity={0.78}
+              fill="url(#chidab-wall-tiles)"
+              fillOpacity={1}
               stroke="#cbd5e1"
               strokeWidth={1.5}
               strokeDasharray="6,4"

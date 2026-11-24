@@ -73,7 +73,19 @@ export function loadProjectsList(): SavedProjectRecord[] {
         throw new Error('Invalid saved project list');
       }
       // Respect an explicitly emptied project list instead of resurrecting deleted/sample projects
-      return parsed.sort((a, b) => safeTimestamp(b.updatedAt) - safeTimestamp(a.updatedAt));
+      // Upgrade only the exact untouched v0.1 sample, never a user-designed room.
+      let changed = false;
+      const migrated = parsed.map(rec => {
+        const w = rec.state.walls;
+        if (rec.name !== 'نمونه سرویس بهداشتی' || w.length !== 4 || w.some(v => v.boxes.length || v.appliances.length || v.openings.length) ||
+          (rec.state.columns?.length ?? 0) || (rec.state.diningSets?.length ?? 0) ||
+          !w.every((v,i) => v.x1Cm === [-140,140,140,-140][i] && v.y1Cm === [-125,-125,125,125][i] &&
+          v.x2Cm === [140,140,-140,-140][i] && v.y2Cm === [-125,125,125,-125][i] && v.height === 265)) return rec;
+        changed = true;
+        return {...rec, state: buildPresetProject('L')};
+      });
+      if (changed) saveProjectsList(migrated);
+      return migrated.sort((a, b) => safeTimestamp(b.updatedAt) - safeTimestamp(a.updatedAt));
     }
   } catch (error) {
     unreadableProjects = true;

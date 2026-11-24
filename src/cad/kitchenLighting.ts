@@ -155,7 +155,7 @@ export function addCeilingFillLights(parent: THREE.Group, outline: FloorPoint[],
   const other = alongX ? zs : xs;
   const min = Math.min(...axis);
   const max = Math.max(...axis);
-  for (const fraction of [0.2, 0.5, 0.8]) {
+  for (const fraction of [0.5]) {
     const across = min + (max - min) * fraction;
     const crossings: number[] = [];
     for (let i = 0; i < axis.length; i++) {
@@ -179,7 +179,7 @@ export function addCeilingFillLights(parent: THREE.Group, outline: FloorPoint[],
     const light = new THREE.RectAreaLight(0xfff4e4, intensity,
       alongX ? longSide : shortSide, alongX ? shortSide : longSide);
     // Position the ceiling fill a full meter above the project ceiling.
-    light.position.set(x, heightM + 1, z);
+    light.position.set(x, heightM - 0.025, z);
     light.lookAt(x, 0, z);
     const diffuser = new THREE.Mesh(new THREE.PlaneGeometry(light.width, light.height),
       new THREE.MeshBasicMaterial({ color: 0xfff4e4, side: THREE.DoubleSide }));

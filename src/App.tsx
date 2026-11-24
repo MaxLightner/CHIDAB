@@ -140,6 +140,7 @@ import { fridgeModelFinish, finishLabel, syncEquipmentFinishes, cooktopForFinish
 import { alignSelectedDoorsInBox, equalizeSelectedVerticalWidths, equalizeSelectedDrawerHeights } from './cad/selectionAlign';
 import { copySelection } from './cad/copySelection';
 import { BottomDock } from './components/BottomDock';
+import { ChidabTilePanel } from './components/ChidabTilePanel';
 import { FrontCanvas } from './components/FrontCanvas';
 import { PlanCanvas } from './components/PlanCanvas';
 import { ProjectsScreen } from './components/ProjectsScreen';
@@ -403,6 +404,7 @@ export default function App() {
   const [initialXrSession, setInitialXrSession] = useState<Promise<XRSession> | null>(null);
   const [arSessionKillSignal, setArSessionKillSignal] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tilesOpen, setTilesOpen] = useState(false);
   const [previewHdrRotation, setPreviewHdrRotation] = useState<number | null>(null);
   const savedHdrRotation = project.settings?.hdrRotationDegrees;
   const hdrRotationDegrees = previewHdrRotation ?? (Number.isFinite(savedHdrRotation) ? savedHdrRotation! : 0);
@@ -3939,6 +3941,7 @@ export default function App() {
               </div>
 
               <FrontCanvas
+                tileSettings={project.settings}
                 offerSelection={offerSelection}
                 onSelectSurface={selectSurface}
                 frontCutOrient={frontCutOrient}
@@ -4186,6 +4189,7 @@ export default function App() {
 
       {viewMode !== 'ar' && !dialogOpen && (
         <BottomDock
+          onOpenTiles={() => setTilesOpen(true)}
           activeTool={tool}
           diningSeats={diningSeats} diningRotation={diningRotation} furnitureKind={furnitureKind}
           onDiningSeats={setDiningSeats} onRotateDining={rotateDining}
@@ -4205,6 +4209,7 @@ export default function App() {
         />
       )}
 
+      {tilesOpen && <ChidabTilePanel settings={project.settings} onClose={()=>setTilesOpen(false)} onApply={value=>{commitState(prev=>({...prev,settings:{...DEFAULT_PROJECT_SETTINGS,...prev.settings,chidabTiles:value}}),true);setTilesOpen(false);}}/>}
       {auditOpen && (
         <div role="dialog" aria-modal="true" aria-label="بررسی سلامت کابینت‌ها"
           className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" dir="rtl">
