@@ -3744,6 +3744,7 @@ export const FrontCanvas: React.FC<FrontCanvasProps> = ({
               strokeDasharray="6,4"
             />
             {wallCells(wall,wallDesign(wall,tileSettings)).map(c=>{const d=wallDesign(wall,tileSettings);return <rect key={c.key} x={originX+c.x*s} y={floorY-(c.y+c.height)*s} width={c.width*s} height={c.height*s} fill={(paintPreview.includes(c.key)?tileBrush==='decor':c.decor)?d.decorColor:d.color} pointerEvents="none"/>;})}
+            {tileBrush!=='off'&&<g pointerEvents="none" opacity=".26" stroke="#527ca3" strokeWidth=".5">{Array.from({length:Math.min(160,Math.floor(wall.length/10)+1)},(_,i)=><path key={'gridx'+i} d={`M${originX+i*10*s} ${floorY-wallH}V${floorY}`}/>)}{Array.from({length:Math.min(160,Math.floor(wall.height/10)+1)},(_,i)=><path key={'gridy'+i} d={`M${originX} ${floorY-i*10*s}h${wallW}`}/>)}</g>}
             <line
               x1={originX - 24}
               y1={floorY}

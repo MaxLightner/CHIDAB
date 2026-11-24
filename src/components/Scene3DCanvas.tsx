@@ -730,6 +730,16 @@ export const Scene3DCanvas: React.FC<Scene3DCanvasProps> = (props) => {
       if (!ar?.active && controls.enableDamping && !fa) {
         if (controls.update()) needsRender = true;
       }
+      if (built) {
+        const groups=built.root.children.filter(g=>g.userData.chidabWallId);
+        const walls=propsRef.current.project.walls;
+        const cx=walls.length?walls.reduce((n,w)=>n+(w.x1Cm+w.x2Cm)*.005,0)/walls.length:0;
+        const cz=walls.length?walls.reduce((n,w)=>n+(w.y1Cm+w.y2Cm)*.005,0)/walls.length:0;
+        let nearest:THREE.Object3D|undefined;let score=-Infinity;
+        const vx=camera.position.x-cx,vz=camera.position.z-cz;
+        if(!ar?.active&&groups.length>=3&&Math.hypot(vx,vz)>.3)for(const g of groups){const [x,z]=g.userData.chidabWallCenter as number[];const q=(x-cx)*vx+(z-cz)*vz;if(q>score){score=q;nearest=g;}}
+        for(const g of groups){const visible=g!==nearest;if(g.visible!==visible){g.visible=visible;needsRender=true;}}
+      }
       if (needsRender || xrFrame) {
         needsRender = false;
         if (!ar?.editingBlocked) updateSurfaceCursorMarker(surfaceMarker, surfaceCursorRef.current);

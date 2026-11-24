@@ -1541,6 +1541,7 @@ export const PlanCanvas: React.FC<PlanCanvasProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={(e) => {
+          bathDrag.current=null;bathTouch.current=null;onBathHover?.(null);
           activePointersRef.current.delete(e.pointerId);
           if (touchTargetPointer.current === e.pointerId) {
             touchTargetPointer.current = null;

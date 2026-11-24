@@ -417,6 +417,7 @@ export default function App() {
   const [bathMoving,setBathMoving]=useState(false);
   const [bathModelIndex,setBathModelIndex]=useState(0);
   const [bathHover,setBathHover]=useState<BathItem|null>(null);
+  const bathPointer=useRef<{x:number;y:number}|null>(null);
   const [brush,setBrush]=useState<'off'|'plain'|'decor'>('off');
   const [briefDialog,setBriefDialog]=useState<'style'|'wizard'|null>(null);
   const [previewHdrRotation, setPreviewHdrRotation] = useState<number | null>(null);
@@ -3779,7 +3780,7 @@ export default function App() {
               <div dir="ltr" className="flex flex-row flex-1 min-h-0 min-w-0 overflow-hidden">
               <div onPointerEnter={()=>setTopHeightPct(58)} style={{ width: `${topHeightPct}%` }} className="min-w-0 shrink-0 transition-[width] duration-300 relative">
                 <PlanCanvas
-                  bathItems={project.bathItems||[]} bathSelected={bathSelected} bathPlacing={!!bathKind||bathMoving} bathPreview={bathHover} onBathHover={(x,y)=>setBathHover(x===null?null:makeBathPreview(x,y!))} onBathDrag={moveBathDirect} onBathModelStep={dir=>{setBathModelIndex(i=>(i+dir+3)%3);setBathHover(null);}} onBathPoint={placeBath} onBathSelect={id=>{setBathSelected(id);setBathOpen(true);setBathKind(null);setBathMoving(false);}}
+                  bathItems={project.bathItems||[]} bathSelected={bathSelected} bathPlacing={!!bathKind||bathMoving} bathPreview={bathHover} onBathHover={(x,y)=>{bathPointer.current=x===null?null:{x,y:y!};setBathHover(x===null?null:makeBathPreview(x,y!));}} onBathDrag={moveBathDirect} onBathModelStep={dir=>{if(!bathKind)return;const n=(bathModelIndex+dir+3)%3;setBathModelIndex(n);const p=bathPointer.current;if(p){const cfg=bathModel(bathKind,n);setBathHover(locateBathItem({id:'bath_preview',kind:bathKind,model:n,xCm:p.x,yCm:p.y,width:cfg.width,depth:cfg.depth,height:cfg.height,elevY:cfg.elevY,rotation:0},p.x,p.y,project.walls));}}} onBathPoint={placeBath} onBathSelect={id=>{setBathSelected(id);setBathOpen(true);setBathKind(null);setBathMoving(false);}}
                   onDiningSeatsChange={setDiningSeats}
                   diningShape={diningShape}
                   offerSelection={offerSelection}
@@ -4256,7 +4257,7 @@ export default function App() {
         />
       )}
 
-      {bathOpen && viewMode==='2d' && !dialogOpen && <ChidabBathControls kind={bathKind} item={selectedBath} moving={bathMoving} onKind={k=>{setTool('select');setBathSelected(null);setBathMoving(false);setBathKind(k);}} onEdit={editBath} onMove={()=>{setBathMoving(true);setBathKind(null);}} onDelete={()=>{commitState(p=>({...p,bathItems:(p.bathItems||[]).filter(i=>i.id!==bathSelected)}),true);setBathSelected(null);setBathMoving(false);}} onCancel={()=>{setBathKind(null);setBathMoving(false);setBathSelected(null);setBathOpen(false);}}/>}
+      {bathOpen && viewMode==='2d' && !dialogOpen && <ChidabBathControls kind={bathKind} item={selectedBath} moving={bathMoving} onKind={k=>{setTool('select');setBathSelected(null);setBathMoving(false);setBathKind(k);}} onEdit={editBath} onMove={()=>{setBathMoving(true);setBathKind(null);}} onDelete={()=>{commitState(p=>({...p,bathItems:(p.bathItems||[]).filter(i=>i.id!==bathSelected)}),true);setBathSelected(null);setBathMoving(false);}} onCancel={()=>{setBathKind(null);setBathMoving(false);setBathSelected(null);setBathOpen(false);setBathHover(null);}}/>}
       {briefDialog&&<ChidabBriefDialog mode={briefDialog} brief={project.bathBrief} onClose={()=>setBriefDialog(null)} onApply={brief=>{commitState(p=>({...p,bathBrief:brief}),true);setBriefDialog(null);}}/>}
       {auditOpen && (
         <div role="dialog" aria-modal="true" aria-label="بررسی سلامت کابینت‌ها"

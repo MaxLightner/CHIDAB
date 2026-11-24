@@ -982,16 +982,40 @@ export function buildKitchen3DScene(
     });
     // Position extrusion strictly behind z=0 relative to normalSign!
     wallGeo.translate(0, 0, normalSign > 0 ? -wallThick : 0);
-    let surfaceMat=tileWallMaterial;
-    if(wall.tileDesign){
-      const d=wallDesign(wall,project.settings),canvas=document.createElement('canvas');canvas.width=Math.min(2048,Math.max(128,Math.round(wall.length*6)));canvas.height=Math.min(2048,Math.max(128,Math.round(wall.height*6)));
-      const ctx=canvas.getContext('2d')!,sx=canvas.width/wall.length,sy=canvas.height/wall.height;
-      ctx.fillStyle=tileConfig.groutColor;ctx.fillRect(0,0,canvas.width,canvas.height);
-      for(const c of wallCells(wall,d)){ctx.fillStyle=c.decor?d.decorColor:d.color;ctx.fillRect(c.x*sx,(wall.height-c.y-c.height)*sy,c.width*sx,c.height*sy);}
-      const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;tex.repeat.set(1/wallLenM,1/wallHM);tex.anisotropy=8;
-      surfaceMat=new THREE.MeshStandardMaterial({map:tex,roughness:.62,metalness:0});
+    const d=wallDesign(wall,project.settings);
+    const groutMat=new THREE.MeshStandardMaterial({color:tileConfig.groutColor,roughness:.93});
+    const plainTile=new THREE.MeshStandardMaterial({color:d.color,roughness:.45});
+    const decorTile=new THREE.MeshStandardMaterial({color:d.decorColor,roughness:.45});
+    const wallMesh = new THREE.Mesh(wallGeo, [groutMat, matWall]);
+    const roomCx=vertices.length?vertices.reduce((n,p)=>n+p.x,0)/vertices.length:0;
+    const roomCz=vertices.length?vertices.reduce((n,p)=>n+p.y,0)/vertices.length:0;
+    const interiorSign=(roomCx-wall.x1Cm)*rightVec.x+(roomCz-wall.y1Cm)*rightVec.z>=0?1:-1;
+    const surfaceZ=interiorSign===normalSign?0:interiorSign*wallThick;
+    const surfaceGroup=new THREE.Group();
+    const pieces=wallCells(wall,d);
+    for(const cell of pieces){
+      let fragments=[{x:cell.x,y:cell.y,w:cell.width,h:cell.height}];
+      for(const o of wall.openings||[]){
+        if(o.kind==='column')continue;
+        fragments=fragments.flatMap(p=>{
+          const a=Math.max(p.x,o.offsetX),b=Math.max(p.y,o.elevY),c=Math.min(p.x+p.w,o.offsetX+o.width),e=Math.min(p.y+p.h,o.elevY+o.height);
+          if(c<=a||e<=b)return [p];
+          return [{x:p.x,y:p.y,w:a-p.x,h:p.h},{x:c,y:p.y,w:p.x+p.w-c,h:p.h},{x:a,y:p.y,w:c-a,h:b-p.y},{x:a,y:e,w:c-a,h:p.y+p.h-e}].filter(v=>v.w>.03&&v.h>.03);
+        });
+      }
+      for(const p of fragments){
+        const w=p.w*CM,h=p.h*CM,bevel=Math.min(.00015,w/5,h/5);
+        const shape=new THREE.Shape();shape.moveTo(bevel,bevel);shape.lineTo(w-bevel,bevel);shape.lineTo(w-bevel,h-bevel);shape.lineTo(bevel,h-bevel);shape.closePath();
+        const geo=new THREE.ExtrudeGeometry(shape,{depth:.0007,bevelEnabled:true,bevelSize:bevel,bevelThickness:.00015,bevelSegments:1,steps:1});
+        geo.translate(0,0,.00015);
+        const tile=new THREE.Mesh(geo,cell.decor?decorTile:plainTile);
+        if(interiorSign<0){tile.rotation.y=Math.PI;tile.position.set((p.x+p.w)*CM,p.y*CM,surfaceZ);}else tile.position.set(p.x*CM,p.y*CM,surfaceZ);
+        tile.receiveShadow=true;tile.userData={kind:'wall',wallId:wall.id};surfaceGroup.add(tile);
+      }
     }
-    const wallMesh = new THREE.Mesh(wallGeo, [surfaceMat, matWall]);
+    wallGrp.add(surfaceGroup);
+    wallGrp.userData.chidabWallId=wall.id;
+    wallGrp.userData.chidabWallCenter=[(wall.x1Cm+wall.x2Cm)*CM/2,(wall.y1Cm+wall.y2Cm)*CM/2];
     wallMesh.receiveShadow = true;
     wallMesh.castShadow = true;
     wallMesh.userData = { kind: 'wall', wallId: wall.id } as Scene3DHitData;
