@@ -254,7 +254,14 @@ export interface RoomColumn {
   heightCm: number;
 }
 
+export interface ChidabWallDesign {
+  width: number; height: number; groutMm: number; color: string; decorColor: string;
+  offsetX: number; offsetY: number; decor: Record<string, boolean>;
+}
+export type BathKind = 'vanity'|'toilet'|'squat'|'shower'|'tub'|'glass'|'mirror'|'cabinet'|'washer'|'drain'|'towel'|'jacuzzi';
+export interface BathItem { id:string; kind:BathKind; xCm:number; yCm:number; width:number; depth:number; height:number; elevY:number; rotation:number; }
 export interface Wall {
+  tileDesign?: ChidabWallDesign;
   id: string;
   name: string;
   x1Cm: number;
@@ -356,6 +363,7 @@ export interface ArCalibrationState {
 }
 
 export interface ProjectState {
+  bathItems?: BathItem[];
   walls: Wall[];
   columns?: RoomColumn[];
   diningSets?: FloorFurniture[];

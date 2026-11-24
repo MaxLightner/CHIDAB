@@ -1,4 +1,4 @@
-import { getChidabTiles, tilePitch } from '../cad/chidabTiles';
+import { getChidabTiles, tilePitch, wallDesign, wallCells } from '../cad/chidabTiles';
 import { getCabinetLighting } from '../cad/cabinetLighting';
 import { svgPickTargets, type OfferSelection, type PickCandidate } from './SelectionPicker';
 import { findFrontCut } from '../cad/frontCut';
@@ -3722,12 +3722,13 @@ export const FrontCanvas: React.FC<FrontCanvasProps> = ({
               y={floorY - wallH}
               width={wallW}
               height={wallH}
-              fill="url(#chidab-wall-tiles)"
+              fill={wall.tileDesign ? getChidabTiles(tileSettings).groutColor : "url(#chidab-wall-tiles)"}
               fillOpacity={1}
               stroke="#cbd5e1"
               strokeWidth={1.5}
               strokeDasharray="6,4"
             />
+            {wall.tileDesign && wallCells(wall,wallDesign(wall,tileSettings)).map(c=><rect key={c.key} x={originX+c.x*s} y={floorY-(c.y+c.height)*s} width={c.width*s} height={c.height*s} fill={c.decor?wall.tileDesign!.decorColor:wall.tileDesign!.color} pointerEvents="none"/>)}
             <line
               x1={originX - 24}
               y1={floorY}

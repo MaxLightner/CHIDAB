@@ -1,0 +1,22 @@
+import React,{useState,useRef} from 'react';
+import type {Wall,ProjectSettings,ChidabWallDesign} from '../cad/types';
+import {wallDesign,wallCells} from '../cad/chidabTiles';
+export function ChidabWallDesigner({wall,settings,onApply,onClose}:{wall:Wall;settings?:ProjectSettings;onApply:(d:ChidabWallDesign)=>void;onClose:()=>void}){
+ const [d,setD]=useState(()=>wallDesign(wall,settings));const [brush,setBrush]=useState(true);const [grid,setGrid]=useState(0);const drawing=useRef(false);
+ const cells=wallCells(wall,d);const paint=(key:string)=>setD(v=>({...v,decor:{...v.decor,[key]:brush}}));
+ const change=(key:'width'|'height'|'groutMm'|'offsetX'|'offsetY',n:number)=>setD(v=>({...v,[key]:n,...(key==='width'||key==='height'?{decor:{}}:{})}));
+ const pattern=(type:string)=>setD(v=>({...v,decor:Object.fromEntries(wallCells(wall,v).map(c=>[c.key,type==='vertical'?Math.abs(c.x+c.width/2-wall.length/2)<=v.width/2:type==='horizontal'?Math.abs(c.y+c.height/2-wall.height/2)<=v.height/2:false]))}));
+ return <div role="dialog" aria-modal="true" dir="rtl" className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-2" onPointerUp={()=>drawing.current=false}>
+ <section className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[95dvh] overflow-auto p-4 space-y-3">
+ <header className="flex justify-between items-center"><h2 className="font-black text-lg">طراحی کاشی · {wall.name} ({wall.length} × {wall.height} cm)</h2><button onClick={onClose} className="border rounded px-3 py-2">بستن</button></header>
+ <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">{([['width','عرض'],['height','ارتفاع'],['groutMm','بند (mm)'],['offsetX','شروع افقی'],['offsetY','شروع عمودی']] as const).map(([k,l])=><label key={k} className="text-xs font-bold">{l}<input type="number" step={0.1} min={k==='width'||k==='height'?5:0} max={k==='groutMm'?10:400} value={d[k]} onChange={e=>change(k,Number(e.target.value))} className="block w-full border rounded p-2" dir="ltr"/></label>)}</div>
+ <div className="flex flex-wrap items-center gap-2 text-sm"><label>زمینه <input type="color" value={d.color} onChange={e=>setD(v=>({...v,color:e.target.value}))}/></label><label>دکور <input type="color" value={d.decorColor} onChange={e=>setD(v=>({...v,decorColor:e.target.value}))}/></label><button onClick={()=>setBrush(true)} className={'border p-2 rounded '+(brush?'bg-indigo-100':'')}>قلم دکور</button><button onClick={()=>setBrush(false)} className={'border p-2 rounded '+(!brush?'bg-indigo-100':'')}>قلم ساده</button><button onClick={()=>setD(v=>({...v,width:v.height,height:v.width,decor:{}}))} className="border p-2 rounded">چرخش ۹۰°</button><select value={grid} onChange={e=>setGrid(+e.target.value)} className="border rounded p-2"><option value={0}>بدون شبکه کمکی</option><option value={5}>شبکه ۵ cm</option><option value={10}>شبکه ۱۰ cm</option></select></div>
+ <div className="flex gap-2 flex-wrap">{[['clear','ساده'],['vertical','دکور عمودی'],['horizontal','دکور افقی']].map(([v,l])=><button key={v} onClick={()=>pattern(v)} className="border rounded p-2 text-sm">{l}</button>)}</div>
+ <svg viewBox={'0 0 '+wall.length+' '+wall.height} className="block w-full max-h-[48dvh] bg-slate-300 touch-none" onPointerLeave={()=>drawing.current=false}>
+ {cells.map(c=><rect key={c.key} x={c.x} y={wall.height-c.y-c.height} width={c.width} height={c.height} fill={c.decor?d.decorColor:d.color} onPointerDown={e=>{e.preventDefault();drawing.current=true;paint(c.key)}} onPointerEnter={()=>{if(drawing.current)paint(c.key)}}/>)}
+ {grid>0&&<g pointerEvents="none" stroke="#527ca3" strokeWidth=".3" opacity=".55">{Array.from({length:Math.min(200,Math.floor(wall.length/grid)+1)},(_,i)=><path key={'x'+i} d={'M'+i*grid+' 0V'+wall.height}/>)}{Array.from({length:Math.min(200,Math.floor(wall.height/grid)+1)},(_,i)=><path key={'y'+i} d={'M0 '+i*grid+'H'+wall.length}/>)}</g>}
+ {(wall.openings||[]).filter(o=>o.kind!=='column').map(o=><rect key={o.id} x={o.offsetX} y={wall.height-o.elevY-o.height} width={o.width} height={o.height} fill="#b3c2ce" stroke="#64748b" strokeWidth="1"/>)}
+ </svg><p className="text-xs text-slate-500">کاشی‌ها از کف محاسبه می‌شوند. طرح هر دیوار مستقل است. دکور فعلاً رنگی و آزمایشی است.</p>
+ <button onClick={()=>onApply({...d,width:Math.max(5,Math.min(400,d.width||60)),height:Math.max(5,Math.min(400,d.height||120)),groutMm:Math.max(0,Math.min(10,d.groutMm||0))})} className="w-full bg-indigo-600 text-white rounded-lg p-3 font-bold">اعمال طرح دیوار</button>
+ </section></div>;
+}

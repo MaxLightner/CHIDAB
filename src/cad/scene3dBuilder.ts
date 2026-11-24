@@ -1,4 +1,5 @@
-import { getChidabTiles, tilePitch } from './chidabTiles';
+import { BATH_CATALOG } from './chidabEquipment';
+import { getChidabTiles, tilePitch, wallDesign, wallCells } from './chidabTiles';
 import { fitHandleLengthCm } from './handleGeometry';
 import * as THREE from 'three';
 import {
@@ -981,7 +982,16 @@ export function buildKitchen3DScene(
     });
     // Position extrusion strictly behind z=0 relative to normalSign!
     wallGeo.translate(0, 0, normalSign > 0 ? -wallThick : 0);
-    const wallMesh = new THREE.Mesh(wallGeo, [tileWallMaterial, matWall]);
+    let surfaceMat=tileWallMaterial;
+    if(wall.tileDesign){
+      const d=wallDesign(wall,project.settings),canvas=document.createElement('canvas');canvas.width=Math.min(2048,Math.max(128,Math.round(wall.length*6)));canvas.height=Math.min(2048,Math.max(128,Math.round(wall.height*6)));
+      const ctx=canvas.getContext('2d')!,sx=canvas.width/wall.length,sy=canvas.height/wall.height;
+      ctx.fillStyle=tileConfig.groutColor;ctx.fillRect(0,0,canvas.width,canvas.height);
+      for(const c of wallCells(wall,d)){ctx.fillStyle=c.decor?d.decorColor:d.color;ctx.fillRect(c.x*sx,(wall.height-c.y-c.height)*sy,c.width*sx,c.height*sy);}
+      const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;tex.repeat.set(1/wallLenM,1/wallHM);tex.anisotropy=8;
+      surfaceMat=new THREE.MeshStandardMaterial({map:tex,roughness:.62,metalness:0});
+    }
+    const wallMesh = new THREE.Mesh(wallGeo, [surfaceMat, matWall]);
     wallMesh.receiveShadow = true;
     wallMesh.castShadow = true;
     wallMesh.userData = { kind: 'wall', wallId: wall.id } as Scene3DHitData;
@@ -1281,6 +1291,20 @@ export function buildKitchen3DScene(
     }
   }
 
+  // Preliminary CHIDAB fixtures; independent of kitchen cabinetry.
+  for(const item of project.bathItems||[]){
+    const g=new THREE.Group();const w=item.width*CM,d=item.depth*CM,h=item.height*CM;
+    const material=new THREE.MeshStandardMaterial({color:BATH_CATALOG[item.kind].color,roughness:.35,transparent:item.kind==='glass',opacity:item.kind==='glass'?.28:1});
+    const box=(ww:number,hh:number,dd:number,x:number,y:number,z:number)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(ww,hh,dd),material);m.position.set(x,y,z);m.castShadow=item.kind!=='glass';m.receiveShadow=true;g.add(m);};
+    const oval=(ww:number,hh:number,dd:number,y:number,z:number)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),material);m.scale.set(ww/2,hh/2,dd/2);m.position.set(0,y,z);m.castShadow=true;g.add(m);};
+    if(item.kind==='toilet'){box(w*.65,h*.65,d*.3,0,h*.62,-d*.30);oval(w,h*.48,d*.72,h*.24,d*.10);}
+    else if(item.kind==='vanity'){box(w,h*.35,d,0,h*.825,0);oval(w*.8,h*.8,d*.85,h*.4,0);}
+    else if(item.kind==='shower'){box(.025,h,.025,0,h/2,-d/2+.025);box(.22,.035,.22,0,h,-d/2+.1);}
+    else if(item.kind==='tub'||item.kind==='jacuzzi'){box(w,h*.12,d,0,h*.06,0);box(w,h,d*.06,0,h/2,-d*.47);box(w,h,d*.06,0,h/2,d*.47);box(w*.05,h,d,-w*.475,h/2,0);box(w*.05,h,d,w*.475,h/2,0);}
+    else if(item.kind==='squat'){oval(w,h,d,h/2,0);}
+    else box(w,h,d,0,h/2,0);
+    g.position.set(item.xCm*CM,item.elevY*CM,item.yCm*CM);g.rotation.y=-item.rotation*Math.PI/180;root.add(g);bounds.expandByObject(g);
+  }
   // Solid architectural infill for upper cabinet corners (wall & wall-deep) so L/U upper corners are never hollow
   const cornerInfills = buildUpperCornerInfills3D(project, matPack, doorOpenProgress);
   if (cornerInfills.children.length > 0) {

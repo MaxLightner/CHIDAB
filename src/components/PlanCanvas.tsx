@@ -1,3 +1,4 @@
+import { BATH_CATALOG } from '../cad/chidabEquipment';
 import { getChidabTiles, tilePitch } from '../cad/chidabTiles';
 import { svgPickTargets, type OfferSelection, type PickCandidate } from './SelectionPicker';
 import { diningLayout, snapDiningPosition, nextDiningSeats } from '../cad/diningLayout';
@@ -90,6 +91,11 @@ function DiningPlanSymbol({ item, scale, selected, ghost }: { item: FloorFurnitu
 }
 
 interface PlanCanvasProps {
+  bathItems?: import('../cad/types').BathItem[];
+  bathSelected?: string|null;
+  bathPlacing?: boolean;
+  onBathPoint?: (x:number,y:number)=>void;
+  onBathSelect?: (id:string)=>void;
   offerSelection: OfferSelection;
   diningSets: FloorFurniture[];
   selectedDiningId?: string | null;
@@ -192,6 +198,7 @@ interface PlanCanvasProps {
 }
 
 export const PlanCanvas: React.FC<PlanCanvasProps> = ({
+  bathItems=[],bathSelected,bathPlacing,onBathPoint,onBathSelect,
   offerSelection,
   onBeginDrag,
   onResizeCabinet,
@@ -499,6 +506,9 @@ export const PlanCanvas: React.FC<PlanCanvasProps> = ({
   };
 
   const handlePointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if(e.button===0 && bathPlacing){const p=clientToCm(e.clientX,e.clientY);onBathPoint?.(p.x,p.y);return;}
+    const bathId=(e.target as Element).closest('[data-bath-id]')?.getAttribute('data-bath-id');
+    if(e.button===0&&bathId&&tool==='select'){onBathSelect?.(bathId);return;}
     touchPointerMode.current = e.pointerType === 'touch';
     if (e.button === 2) return;
     activePointersRef.current.add(e.pointerId);
@@ -2476,6 +2486,12 @@ export const PlanCanvas: React.FC<PlanCanvasProps> = ({
             ))}
           </g>
         )}
+        {bathItems.map(i=><g key={i.id} data-bath-id={i.id} transform={`translate(${i.xCm*s},${i.yCm*s}) rotate(${i.rotation})`} style={{cursor:'pointer'}}>
+          <rect x={-i.width*s/2} y={-i.depth*s/2} width={i.width*s} height={i.depth*s} rx={Math.min(5,i.depth*s/4)} fill={BATH_CATALOG[i.kind].color} fillOpacity={i.kind==='glass'||i.kind==='shower'?0.45:1} stroke={bathSelected===i.id?'#4f46e5':'#64748b'} strokeWidth={bathSelected===i.id?2.5:1.1}/>
+          {['toilet','vanity','tub','squat','jacuzzi','washer'].includes(i.kind)&&<ellipse cx={0} cy={0} rx={i.width*s*.34} ry={i.depth*s*.34} fill="#f8fafc" stroke="#94a3b8" pointerEvents="none"/>}
+          {i.kind==='shower'&&<circle cx={0} cy={-i.depth*s*.28} r={Math.max(3,8*s)} fill="#8495a1" pointerEvents="none"/>}
+          <text textAnchor="middle" dominantBaseline="middle" fontSize={Math.max(8,Math.min(12,i.width*s/5))} fill="#334155" pointerEvents="none">{BATH_CATALOG[i.kind].label}</text>
+        </g>)}
       </svg>
 
       {touchTarget && isPlanPlacement(tool) && (

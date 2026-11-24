@@ -140,6 +140,10 @@ import { fridgeModelFinish, finishLabel, syncEquipmentFinishes, cooktopForFinish
 import { alignSelectedDoorsInBox, equalizeSelectedVerticalWidths, equalizeSelectedDrawerHeights } from './cad/selectionAlign';
 import { copySelection } from './cad/copySelection';
 import { BottomDock } from './components/BottomDock';
+import { ChidabWallDesigner } from './components/ChidabWallDesigner';
+import { ChidabBathControls } from './components/ChidabBathControls';
+import { BATH_CATALOG, locateBathItem, bathFits } from './cad/chidabEquipment';
+import type { BathKind, BathItem } from './cad/types';
 import { ChidabTilePanel } from './components/ChidabTilePanel';
 import { FrontCanvas } from './components/FrontCanvas';
 import { PlanCanvas } from './components/PlanCanvas';
@@ -405,6 +409,11 @@ export default function App() {
   const [arSessionKillSignal, setArSessionKillSignal] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tilesOpen, setTilesOpen] = useState(false);
+  const [wallTilesId,setWallTilesId]=useState<string|null>(null);
+  const [bathOpen,setBathOpen]=useState(false);
+  const [bathKind,setBathKind]=useState<BathKind|null>(null);
+  const [bathSelected,setBathSelected]=useState<string|null>(null);
+  const [bathMoving,setBathMoving]=useState(false);
   const [previewHdrRotation, setPreviewHdrRotation] = useState<number | null>(null);
   const savedHdrRotation = project.settings?.hdrRotationDegrees;
   const hdrRotationDegrees = previewHdrRotation ?? (Number.isFinite(savedHdrRotation) ? savedHdrRotation! : 0);
@@ -3157,7 +3166,18 @@ export default function App() {
     );
   }
 
-  const dialogOpen = Boolean(measurement || confirmModal || hiddenHandleWarnModal || stylePromptModal?.open || settingsOpen || styleGalleryOpen || auditOpen);
+  const selectedBath=project.bathItems?.find(i=>i.id===bathSelected);
+  const designWall=project.walls.find(w=>w.id===wallTilesId);
+  const editBath=(patch:Partial<BathItem>)=>{if(!selectedBath)return;const next={...selectedBath,...patch};if(!bathFits(next,project.walls)){showToast('تجهیز از محدوده اتاق خارج می‌شود');return;}commitState(p=>({...p,bathItems:(p.bathItems||[]).map(i=>i.id===next.id?next:i)}),true);};
+  const placeBath=(x:number,y:number)=>{
+    const old=bathMoving?selectedBath:undefined;if(!old&&!bathKind)return;
+    const k=old?.kind||bathKind!;const cfg=BATH_CATALOG[k];
+    const item=locateBathItem(old||{id:'bath_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),kind:k,xCm:x,yCm:y,width:cfg.width,depth:cfg.depth,height:cfg.height,elevY:cfg.elevY,rotation:0},x,y,project.walls);
+    if(!bathFits(item,project.walls)){showToast('فضای کافی داخل اتاق نیست؛ محل دیگری انتخاب کنید');return;}
+    commitState(p=>({...p,bathItems:old?(p.bathItems||[]).map(i=>i.id===old.id?item:i):[...(p.bathItems||[]),item]}),true);
+    setBathSelected(item.id);setBathKind(null);setBathMoving(false);
+  };
+  const dialogOpen = Boolean(tilesOpen || wallTilesId || measurement || confirmModal || hiddenHandleWarnModal || stylePromptModal?.open || settingsOpen || styleGalleryOpen || auditOpen);
   const setBoxAppearance = (patch: { color?: string; texture?: CabinetTextureId } & SurfaceFinishPatch) => {
     if (!activeBox || activeBox.type === 'fridge') return;
     mutateActiveWall(w => {
@@ -3280,6 +3300,7 @@ export default function App() {
         onMoveUnit={handleMoveUnit}
         cameraToolbarRef={setCameraToolbarHost}
       />
+      <div className="text-xs text-slate-500 px-2 text-left" dir="ltr">CHIDAB 0.21</div>
       </div>
 
       <div hidden={dialogOpen || ((tool === 'select' || tool === 'move') && !toast)} className="shrink-0 border-b border-slate-200 bg-slate-50">
@@ -3738,6 +3759,7 @@ export default function App() {
             <>
               <div style={{ height: `${topHeightPct}%` }} className="min-h-[110px] shrink-0">
                 <PlanCanvas
+                  bathItems={project.bathItems||[]} bathSelected={bathSelected} bathPlacing={!!bathKind||bathMoving} onBathPoint={placeBath} onBathSelect={id=>{setBathSelected(id);setBathOpen(true);setBathKind(null);setBathMoving(false);}}
                   onDiningSeatsChange={setDiningSeats}
                   diningShape={diningShape}
                   offerSelection={offerSelection}
@@ -4189,6 +4211,7 @@ export default function App() {
 
       {viewMode !== 'ar' && !dialogOpen && (
         <BottomDock
+          wallName={activeWall?.name} onWallTiles={()=>activeWall&&setWallTilesId(activeWall.id)} onBathCatalog={()=>{setBathOpen(v=>!v);setBathKind(null);setBathMoving(false);if(viewMode!=='2d')handleSwitchViewMode('2d');}}
           onOpenTiles={() => setTilesOpen(true)}
           activeTool={tool}
           diningSeats={diningSeats} diningRotation={diningRotation} furnitureKind={furnitureKind}
@@ -4209,6 +4232,8 @@ export default function App() {
         />
       )}
 
+      {bathOpen && viewMode==='2d' && !dialogOpen && <ChidabBathControls kind={bathKind} item={selectedBath} moving={bathMoving} onKind={k=>{setTool('select');setBathSelected(null);setBathMoving(false);setBathKind(k);}} onEdit={editBath} onMove={()=>{setBathMoving(true);setBathKind(null);}} onDelete={()=>{commitState(p=>({...p,bathItems:(p.bathItems||[]).filter(i=>i.id!==bathSelected)}),true);setBathSelected(null);setBathMoving(false);}} onCancel={()=>{setBathKind(null);setBathMoving(false);setBathSelected(null);setBathOpen(false);}}/>}
+      {designWall&&<ChidabWallDesigner key={designWall.id} wall={designWall} settings={project.settings} onClose={()=>setWallTilesId(null)} onApply={d=>{commitState(p=>({...p,walls:p.walls.map(w=>w.id===designWall.id?{...w,tileDesign:d}:w)}),true);setWallTilesId(null);}}/>}
       {tilesOpen && <ChidabTilePanel settings={project.settings} onClose={()=>setTilesOpen(false)} onApply={value=>{commitState(prev=>({...prev,settings:{...DEFAULT_PROJECT_SETTINGS,...prev.settings,chidabTiles:value}}),true);setTilesOpen(false);}}/>}
       {auditOpen && (
         <div role="dialog" aria-modal="true" aria-label="بررسی سلامت کابینت‌ها"
