@@ -1,0 +1,35 @@
+name: Import Kitchyar snapshot
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/import-kitchyar.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Copy pinned source without Git history
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_sha=5543b796a69b5ae8391f64d13844f6b22992788d
+          if test -f CHIDAB-SOURCE.md; then
+            echo "Source already imported; not overwriting."
+            exit 0
+          fi
+          git init "$RUNNER_TEMP/kitchyar-source"
+          git -C "$RUNNER_TEMP/kitchyar-source" fetch --depth=1 https://github.com/MaxLightner/kitchyar.git "$source_sha"
+          test "$(git -C "$RUNNER_TEMP/kitchyar-source" rev-parse FETCH_HEAD)" = "$source_sha"
+          git -C "$RUNNER_TEMP/kitchyar-source" archive FETCH_HEAD | tar -x -C "$GITHUB_WORKSPACE"
+          printf '# CHIDAB source snapshot\n\nSource: https://github.com/MaxLightner/kitchyar/commit/%s\n\nOriginal history not imported.\n' "$source_sha" > CHIDAB-SOURCE.md
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m "Import Kitchyar snapshot into independent CHIDAB repository"
+          git push origin HEAD:main
