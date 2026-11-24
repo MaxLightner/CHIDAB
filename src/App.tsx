@@ -3168,7 +3168,7 @@ export default function App() {
 
   const selectedBath=project.bathItems?.find(i=>i.id===bathSelected);
   const designWall=project.walls.find(w=>w.id===wallTilesId);
-  const editBath=(patch:Partial<BathItem>)=>{if(!selectedBath)return;const next={...selectedBath,...patch};if(!bathFits(next,project.walls)){showToast('تجهیز از محدوده اتاق خارج می‌شود');return;}commitState(p=>({...p,bathItems:(p.bathItems||[]).map(i=>i.id===next.id?next:i)}),true);};
+  const editBath=(patch:Partial<BathItem>)=>{if(!selectedBath)return;const next={...selectedBath,...patch};if(next.elevY+next.height>(project.settings?.wallHeightCm||220)+0.1){showToast('ارتفاع تجهیز از سقف بیشتر است');return;}if(!bathFits(next,project.walls)){showToast('تجهیز از محدوده اتاق خارج می‌شود');return;}commitState(p=>({...p,bathItems:(p.bathItems||[]).map(i=>i.id===next.id?next:i)}),true);};
   const placeBath=(x:number,y:number)=>{
     const old=bathMoving?selectedBath:undefined;if(!old&&!bathKind)return;
     const k=old?.kind||bathKind!;const cfg=BATH_CATALOG[k];
@@ -3964,6 +3964,7 @@ export default function App() {
 
               <FrontCanvas
                 tileSettings={project.settings}
+                bathItems={project.bathItems||[]} bathSelected={bathSelected} onBathSelect={id=>{setBathSelected(id);setBathOpen(true);setBathKind(null);setBathMoving(false);}}
                 offerSelection={offerSelection}
                 onSelectSurface={selectSurface}
                 frontCutOrient={frontCutOrient}

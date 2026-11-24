@@ -1,3 +1,4 @@
+import { BATH_CATALOG } from '../cad/chidabEquipment';
 import { getChidabTiles, tilePitch, wallDesign, wallCells } from '../cad/chidabTiles';
 import { getCabinetLighting } from '../cad/cabinetLighting';
 import { svgPickTargets, type OfferSelection, type PickCandidate } from './SelectionPicker';
@@ -110,6 +111,9 @@ const CAB_DRAW_KIND_ORDER: BoxKind[] = ['base', 'wall', 'wall-deep', 'tall', 'cl
 const HANDLE_STYLE_ORDER = HANDLE_STYLES.map(style => style.id);
 
 interface FrontCanvasProps {
+  bathItems?: import('../cad/types').BathItem[];
+  bathSelected?: string|null;
+  onBathSelect?: (id:string)=>void;
   tileSettings?: import('../cad/types').ProjectSettings;
   offerSelection: OfferSelection;
   onBeginDrag: () => void;
@@ -360,7 +364,7 @@ type DragOp =
     };
 
 export const FrontCanvas: React.FC<FrontCanvasProps> = ({
-  tileSettings,
+  tileSettings,bathItems=[],bathSelected,onBathSelect,
   offerSelection,
   onBeginDrag,
   onCancelDrag,
@@ -1336,6 +1340,8 @@ export const FrontCanvas: React.FC<FrontCanvasProps> = ({
   };
 
   const handlePointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    const bathId=(e.target as Element).closest('[data-front-bath-id]')?.getAttribute('data-front-bath-id');
+    if(e.button===0&&bathId&&tool==='select'){onBathSelect?.(bathId);return;}
     const directPointer = e.pointerType === 'mouse' || e.pointerType === 'pen';
     touchPointerMode.current = e.pointerType === 'touch';
     if (e.button === 2 || !wall) return;
@@ -5938,6 +5944,12 @@ export const FrontCanvas: React.FC<FrontCanvasProps> = ({
             )}
           </>
         )}
+        {wall&&bathItems.filter(i=>i.wallId===wall.id||(!i.wallId&&Math.abs((i.xCm-wall.x1Cm)*Math.sin(wall.angle*Math.PI/180)-(i.yCm-wall.y1Cm)*Math.cos(wall.angle*Math.PI/180))<=i.depth/2+8)).map(i=>{
+          const a=wall.angle*Math.PI/180,x=(i.xCm-wall.x1Cm)*Math.cos(a)+(i.yCm-wall.y1Cm)*Math.sin(a),angle=(i.rotation-wall.angle)*Math.PI/180;
+          const width=Math.abs(Math.cos(angle))*i.width+Math.abs(Math.sin(angle))*i.depth;
+          if(x+width/2<0||x-width/2>wall.length)return null;
+          return <g key={i.id} data-front-bath-id={i.id} style={{cursor:'pointer'}}><rect x={originX+(x-width/2)*s} y={floorY-(i.elevY+i.height)*s} width={width*s} height={i.height*s} rx={2} fill={BATH_CATALOG[i.kind].color} fillOpacity={i.kind==='glass'||i.kind==='shower'?.35:.9} stroke={bathSelected===i.id?'#4f46e5':'#64748b'} strokeWidth={bathSelected===i.id?2:1}/><text x={originX+x*s} y={floorY-(i.elevY+i.height/2)*s} textAnchor="middle" fontSize={10} fill="#334155" pointerEvents="none">{BATH_CATALOG[i.kind].label}</text></g>;
+        })}
       </svg>
       {((touchTarget && isFrontPlacement(tool)) || tool === 'handle') && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex gap-2 whitespace-nowrap rounded-xl border bg-white p-1.5 shadow">

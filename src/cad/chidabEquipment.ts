@@ -20,7 +20,7 @@ export function pointInRoom(x:number,y:number,walls:Wall[]){
 }
 export function locateBathItem(item:BathItem,x:number,y:number,walls:Wall[]):BathItem {
  const snap=(v:number)=>Math.round(v/5)*5;
- if(!BATH_CATALOG[item.kind].wall)return {...item,xCm:snap(x),yCm:snap(y)};
+ if(!BATH_CATALOG[item.kind].wall)return {...item,wallId:undefined,xCm:snap(x),yCm:snap(y)};
  let best:{score:number;item:BathItem}|undefined;
  for(const w of walls){const a=w.angle*Math.PI/180,ux=Math.cos(a),uy=Math.sin(a);
   const t=Math.max(item.width/2,Math.min(w.length-item.width/2,(x-w.x1Cm)*ux+(y-w.y1Cm)*uy));
@@ -30,8 +30,8 @@ export function locateBathItem(item:BathItem,x:number,y:number,walls:Wall[]):Bat
   const dist=item.depth/2+1;const nx=-uy*side,ny=ux*side;
   const xx=bx+nx*dist,yy=by+ny*dist;
   const score=Math.hypot(x-xx,y-yy);
-  if(!best||score<best.score)best={score,item:{...item,xCm:xx,yCm:yy,rotation:w.angle+(side===1?0:180)}};
- }return best&&best.score<100?best.item:{...item,xCm:snap(x),yCm:snap(y)};
+  if(!best||score<best.score)best={score,item:{...item,wallId:w.id,xCm:xx,yCm:yy,rotation:w.angle+(side===1?0:180)}};
+ }return best&&best.score<100?best.item:{...item,wallId:undefined,xCm:snap(x),yCm:snap(y)};
 }
 export function bathFits(i:BathItem,walls:Wall[]){
  const a=i.rotation*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
