@@ -94,6 +94,10 @@ interface PlanCanvasProps {
   bathItems?: import('../cad/types').BathItem[];
   bathSelected?: string|null;
   bathPlacing?: boolean;
+  bathPreview?: import('../cad/types').BathItem|null;
+  onBathHover?: (x:number|null,y?:number)=>void;
+  onBathDrag?: (id:string,x:number,y:number,commit:boolean)=>void;
+  onBathModelStep?: (dir:number)=>void;
   onBathPoint?: (x:number,y:number)=>void;
   onBathSelect?: (id:string)=>void;
   offerSelection: OfferSelection;
@@ -198,7 +202,7 @@ interface PlanCanvasProps {
 }
 
 export const PlanCanvas: React.FC<PlanCanvasProps> = ({
-  bathItems=[],bathSelected,bathPlacing,onBathPoint,onBathSelect,
+  bathItems=[],bathSelected,bathPlacing,bathPreview,onBathHover,onBathDrag,onBathModelStep,onBathPoint,onBathSelect,
   offerSelection,
   onBeginDrag,
   onResizeCabinet,
@@ -258,6 +262,9 @@ export const PlanCanvas: React.FC<PlanCanvasProps> = ({
   onToast,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const bathDrag=useRef<{id:string;x:number;y:number;moved:boolean}|null>(null);
+  const bathTouch=useRef<{x:number;y:number;multi:boolean}|null>(null);
+  const bathStepY=useRef<number|null>(null);
   const paneRef = useRef<HTMLElement | null>(null);
 
   const [planScale, setPlanScale] = useState(0.6);
@@ -506,9 +513,9 @@ export const PlanCanvas: React.FC<PlanCanvasProps> = ({
   };
 
   const handlePointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
-    if(e.button===0 && bathPlacing){const p=clientToCm(e.clientX,e.clientY);onBathPoint?.(p.x,p.y);return;}
+    if(e.button===0 && bathPlacing){const p=clientToCm(e.clientX,e.clientY);if(e.pointerType==='touch'){if(!bathTouch.current)bathTouch.current={...p,multi:false};else bathTouch.current.multi=true;onBathHover?.(p.x,p.y);}else onBathPoint?.(p.x,p.y);return;}
     const bathId=(e.target as Element).closest('[data-bath-id]')?.getAttribute('data-bath-id');
-    if(e.button===0&&bathId&&tool==='select'){onBathSelect?.(bathId);return;}
+    if(e.button===0&&bathId&&(tool==='select'||tool==='move')){onBathSelect?.(bathId);bathDrag.current={id:bathId,x:e.clientX,y:e.clientY,moved:false};e.currentTarget.setPointerCapture(e.pointerId);return;}
     touchPointerMode.current = e.pointerType === 'touch';
     if (e.button === 2) return;
     activePointersRef.current.add(e.pointerId);
@@ -974,6 +981,8 @@ export const PlanCanvas: React.FC<PlanCanvasProps> = ({
   };
 
   const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if(bathDrag.current){const d=bathDrag.current;if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>4)d.moved=true;if(d.moved){const p=clientToCm(e.clientX,e.clientY);onBathDrag?.(d.id,p.x,p.y,false);}return;}
+    if(bathPlacing){const p=clientToCm(e.clientX,e.clientY);if(!bathTouch.current?.multi){onBathHover?.(p.x,p.y);if(bathTouch.current)Object.assign(bathTouch.current,p);}return;}
     if (e.pointerType === 'touch' && activePointersRef.current.size > 1) return;
     if (touchTargetPointer.current === e.pointerId) {
       setTouchTarget({ clientX: e.clientX, clientY: e.clientY });
@@ -1171,6 +1180,8 @@ export const PlanCanvas: React.FC<PlanCanvasProps> = ({
   };
 
   const handlePointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    if(bathDrag.current){const d=bathDrag.current;bathDrag.current=null;if(d.moved){const p=clientToCm(e.clientX,e.clientY);onBathDrag?.(d.id,p.x,p.y,true);}return;}
+    if(bathPlacing){const t=bathTouch.current;if(t&&!t.multi)onBathPoint?.(t.x,t.y);bathTouch.current=null;return;}
     activePointersRef.current.delete(e.pointerId);
     if (touchTargetPointer.current === e.pointerId) {
       touchTargetPointer.current = null;
@@ -1300,6 +1311,7 @@ export const PlanCanvas: React.FC<PlanCanvasProps> = ({
   };
 
   wheelHandlerRef.current = (e: WheelEvent) => {
+    if(bathPlacing){e.preventDefault();onBathModelStep?.(e.deltaY>0?1:-1);return;}
     e.preventDefault();
     const isPlanCyclableTool =
       tool === 'cab-draw' ||
@@ -1324,6 +1336,7 @@ export const PlanCanvas: React.FC<PlanCanvasProps> = ({
   };
 
   touchMoveHandlerRef.current = (e: TouchEvent) => {
+    if(bathPlacing&&e.touches.length>=2){e.preventDefault();const y=(e.touches[0].clientY+e.touches[1].clientY)/2;if(bathStepY.current===null)bathStepY.current=y;const delta=y-bathStepY.current;if(Math.abs(delta)>32){onBathModelStep?.(delta>0?1:-1);bathStepY.current=y;}if(bathTouch.current)bathTouch.current.multi=true;return;}
     if (e.touches.length === 2 && touchPinch.current) {
       e.preventDefault();
       const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -1512,10 +1525,12 @@ export const PlanCanvas: React.FC<PlanCanvasProps> = ({
         }}
         onTouchStart={handleTouchStart}
         onTouchEnd={() => {
+          bathStepY.current=null;
           touchPinch.current = null;
           gestureStepperRef.current.resetTouch();
         }}
         onPointerLeave={() => {
+          if(!bathDrag.current)onBathHover?.(null);
           if (touchTarget) return;
           setPlanHoverWall(null);
           setPlanHoverFloorCm(null);
@@ -2486,7 +2501,7 @@ export const PlanCanvas: React.FC<PlanCanvasProps> = ({
             ))}
           </g>
         )}
-        {bathItems.map(i=><g key={i.id} data-bath-id={i.id} transform={`translate(${i.xCm*s},${i.yCm*s}) rotate(${i.rotation})`} style={{cursor:'pointer'}}>
+        {[...bathItems.filter(i=>!bathPreview||bathPreview.id!==i.id),...(bathPreview?[bathPreview]:[])].map(i=><g key={i.id} data-bath-id={i.id} transform={`translate(${i.xCm*s},${i.yCm*s}) rotate(${i.rotation})`} opacity={bathPreview?.id===i.id?.55:1} pointerEvents={bathPreview?.id===i.id?'none':undefined} style={{cursor:'grab'}}>
           <rect x={-i.width*s/2} y={-i.depth*s/2} width={i.width*s} height={i.depth*s} rx={Math.min(5,i.depth*s/4)} fill={BATH_CATALOG[i.kind].color} fillOpacity={i.kind==='glass'||i.kind==='shower'?0.45:1} stroke={bathSelected===i.id?'#4f46e5':'#64748b'} strokeWidth={bathSelected===i.id?2.5:1.1}/>
           {['toilet','vanity','tub','squat','jacuzzi','washer'].includes(i.kind)&&<ellipse cx={0} cy={0} rx={i.width*s*.34} ry={i.depth*s*.34} fill="#f8fafc" stroke="#94a3b8" pointerEvents="none"/>}
           {i.kind==='shower'&&<circle cx={0} cy={-i.depth*s*.28} r={Math.max(3,8*s)} fill="#8495a1" pointerEvents="none"/>}

@@ -60,7 +60,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           </p>
         </div>
 
-        <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 text-center"><div className="text-4xl font-black tracking-widest text-indigo-700">CHIDAB</div><p className="mt-2 text-slate-500">Studio 0.21 · 2D / 3D / AR</p></div>
+        <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 text-center"><div className="text-4xl font-black tracking-widest text-indigo-700">CHIDAB</div><p className="mt-2 text-slate-500">Studio 0.22 · 2D / 3D / AR</p></div>
 
         <div className="w-full max-w-3xl space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

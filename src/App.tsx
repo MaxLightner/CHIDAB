@@ -140,9 +140,10 @@ import { fridgeModelFinish, finishLabel, syncEquipmentFinishes, cooktopForFinish
 import { alignSelectedDoorsInBox, equalizeSelectedVerticalWidths, equalizeSelectedDrawerHeights } from './cad/selectionAlign';
 import { copySelection } from './cad/copySelection';
 import { BottomDock } from './components/BottomDock';
-import { ChidabWallDesigner } from './components/ChidabWallDesigner';
+import { ChidabToolbar, ChidabBriefDialog } from './components/ChidabToolbar';
+import { wallDesign,wallCells,getChidabTiles } from './cad/chidabTiles';
 import { ChidabBathControls } from './components/ChidabBathControls';
-import { BATH_CATALOG, locateBathItem, bathFits } from './cad/chidabEquipment';
+import { BATH_CATALOG, locateBathItem, bathFits, bathModel } from './cad/chidabEquipment';
 import type { BathKind, BathItem } from './cad/types';
 import { ChidabTilePanel } from './components/ChidabTilePanel';
 import { FrontCanvas } from './components/FrontCanvas';
@@ -414,6 +415,10 @@ export default function App() {
   const [bathKind,setBathKind]=useState<BathKind|null>(null);
   const [bathSelected,setBathSelected]=useState<string|null>(null);
   const [bathMoving,setBathMoving]=useState(false);
+  const [bathModelIndex,setBathModelIndex]=useState(0);
+  const [bathHover,setBathHover]=useState<BathItem|null>(null);
+  const [brush,setBrush]=useState<'off'|'plain'|'decor'>('off');
+  const [briefDialog,setBriefDialog]=useState<'style'|'wizard'|null>(null);
   const [previewHdrRotation, setPreviewHdrRotation] = useState<number | null>(null);
   const savedHdrRotation = project.settings?.hdrRotationDegrees;
   const hdrRotationDegrees = previewHdrRotation ?? (Number.isFinite(savedHdrRotation) ? savedHdrRotation! : 0);
@@ -636,8 +641,8 @@ export default function App() {
     (w: Wall | null) => {
       if (!w) return;
       const ws = workspaceRef.current;
-      const pw = ws?.clientWidth || 900;
-      const ph = (ws?.clientHeight || 600) * ((100 - topHeightPct) / 100);
+      const pw = (ws?.clientWidth || 900)*((100-topHeightPct)/100);
+      const ph = ws?.clientHeight || 600;
       const start = Math.min(0, ...w.boxes.map(box => box.offsetX));
       const end = Math.max(w.length, ...w.boxes.map(box => box.offsetX + box.width));
       const sx = (pw * 0.78) / Math.max(end - start, 100);
@@ -3169,15 +3174,28 @@ export default function App() {
   const selectedBath=project.bathItems?.find(i=>i.id===bathSelected);
   const designWall=project.walls.find(w=>w.id===wallTilesId);
   const editBath=(patch:Partial<BathItem>)=>{if(!selectedBath)return;const next={...selectedBath,...patch};if(next.elevY+next.height>(project.settings?.wallHeightCm||220)+0.1){showToast('ارتفاع تجهیز از سقف بیشتر است');return;}if(!bathFits(next,project.walls)){showToast('تجهیز از محدوده اتاق خارج می‌شود');return;}commitState(p=>({...p,bathItems:(p.bathItems||[]).map(i=>i.id===next.id?next:i)}),true);};
+  const makeBathPreview=(x:number,y:number,existing?:BathItem)=>{
+    const old=existing||(bathMoving?selectedBath:undefined);const k=old?.kind||bathKind;if(!k)return null;
+    const cfg=bathModel(k,bathModelIndex);
+    return locateBathItem(old||{id:'bath_preview',kind:k,model:cfg.model,xCm:x,yCm:y,width:cfg.width,depth:cfg.depth,height:cfg.height,elevY:cfg.elevY,rotation:0},x,y,project.walls);
+  };
+  const moveBathDirect=(id:string,x:number,y:number,commit:boolean)=>{const old=project.bathItems?.find(i=>i.id===id);if(!old)return;const next=makeBathPreview(x,y,old);if(!next)return;if(!commit){setBathHover(next);return;}setBathHover(null);if(!bathFits(next,project.walls))return;commitState(p=>({...p,bathItems:(p.bathItems||[]).map(i=>i.id===id?next:i)}),true);};
   const placeBath=(x:number,y:number)=>{
     const old=bathMoving?selectedBath:undefined;if(!old&&!bathKind)return;
-    const k=old?.kind||bathKind!;const cfg=BATH_CATALOG[k];
-    const item=locateBathItem(old||{id:'bath_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),kind:k,xCm:x,yCm:y,width:cfg.width,depth:cfg.depth,height:cfg.height,elevY:cfg.elevY,rotation:0},x,y,project.walls);
+    const candidate=makeBathPreview(x,y);if(!candidate)return;const item={...candidate,id:old?.id||'bath_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)};
     if(!bathFits(item,project.walls)){showToast('فضای کافی داخل اتاق نیست؛ محل دیگری انتخاب کنید');return;}
     commitState(p=>({...p,bathItems:old?(p.bathItems||[]).map(i=>i.id===old.id?item:i):[...(p.bathItems||[]),item]}),true);
-    setBathSelected(item.id);setBathKind(null);setBathMoving(false);
+    setBathSelected(item.id);setBathKind(null);setBathMoving(false);setBathHover(null);
   };
-  const dialogOpen = Boolean(tilesOpen || wallTilesId || measurement || confirmModal || hiddenHandleWarnModal || stylePromptModal?.open || settingsOpen || styleGalleryOpen || auditOpen);
+  const chooseBath=(k:BathKind)=>{setTool('select');setBathKind(k);setBathModelIndex(0);setBathSelected(null);setBathMoving(false);setBathHover(null);setBathOpen(true);setBrush('off');if(viewMode!=='2d')handleSwitchViewMode('2d');};
+  const paintWall=(keys:string[],decor:boolean)=>{if(!activeWall||!keys.length)return;commitState(p=>({...p,walls:p.walls.map(w=>{if(w.id!==activeWall.id)return w;const d=wallDesign(w,p.settings);return {...w,tileDesign:{...d,decor:{...d.decor,...Object.fromEntries(keys.map(k=>[k,decor]))}}};})}),true);};
+  const smartTiles=()=>{if(!activeWall)return;const d=wallDesign(activeWall,project.settings);const fixtures=(project.bathItems||[]).filter(i=>i.wallId===activeWall.id&&(i.kind==='shower'||i.kind==='vanity'));const a=activeWall.angle*Math.PI/180;
+    const center=fixtures.length?(fixtures[0].xCm-activeWall.x1Cm)*Math.cos(a)+(fixtures[0].yCm-activeWall.y1Cm)*Math.sin(a):activeWall.length/2;
+    const offset=((center-d.width/2)%(d.width+d.groutMm/10)+(d.width+d.groutMm/10))%(d.width+d.groutMm/10);
+    const nd={...d,offsetX:offset,decor:{}};const cells=wallCells(activeWall,nd);
+    nd.decor=Object.fromEntries(cells.map(c=>[c.key,Math.abs(c.x+c.width/2-center)<d.width*.51]));
+    commitState(p=>({...p,walls:p.walls.map(w=>w.id===activeWall.id?{...w,tileDesign:nd}:w)}),true);showToast('طرح آزمایشی دکور بر اساس محور تجهیز یا دیوار اعمال شد');};
+  const dialogOpen = Boolean(briefDialog || measurement || confirmModal || hiddenHandleWarnModal || stylePromptModal?.open || settingsOpen || styleGalleryOpen || auditOpen);
   const setBoxAppearance = (patch: { color?: string; texture?: CabinetTextureId } & SurfaceFinishPatch) => {
     if (!activeBox || activeBox.type === 'fridge') return;
     mutateActiveWall(w => {
@@ -3300,7 +3318,8 @@ export default function App() {
         onMoveUnit={handleMoveUnit}
         cameraToolbarRef={setCameraToolbarHost}
       />
-      <div className="text-xs text-slate-500 px-2 text-left" dir="ltr">CHIDAB 0.21</div>
+      <ChidabToolbar settings={project.settings} wall={activeWall} brush={brush} onBrush={b=>{setBrush(b);setBathKind(null);setBathMoving(false);setBathHover(null);setTool('select');if(viewMode!=='2d')handleSwitchViewMode('2d');}} onSettings={value=>commitState(p=>({...p,settings:{...DEFAULT_PROJECT_SETTINGS,...p.settings,chidabTiles:value}}),true)} onWallDesign={patch=>{if(activeWall)commitState(p=>({...p,walls:p.walls.map(w=>w.id===activeWall.id?{...w,tileDesign:{...wallDesign(w,p.settings),...patch}}:w)}),true);}} onSmart={smartTiles} onStyle={()=>setBriefDialog('style')} onWizard={()=>setBriefDialog('wizard')}/>
+      <div className="text-xs text-slate-500 px-2 text-left" dir="ltr">CHIDAB 0.22</div>
       </div>
 
       <div hidden={dialogOpen || ((tool === 'select' || tool === 'move') && !toast)} className="shrink-0 border-b border-slate-200 bg-slate-50">
@@ -3757,9 +3776,10 @@ export default function App() {
               )}
               {viewMode !== '3d' && (
             <>
-              <div style={{ height: `${topHeightPct}%` }} className="min-h-[110px] shrink-0">
+              <div dir="ltr" className="flex flex-row flex-1 min-h-0 min-w-0 overflow-hidden">
+              <div onPointerEnter={()=>setTopHeightPct(58)} style={{ width: `${topHeightPct}%` }} className="min-w-0 shrink-0 transition-[width] duration-300 relative">
                 <PlanCanvas
-                  bathItems={project.bathItems||[]} bathSelected={bathSelected} bathPlacing={!!bathKind||bathMoving} onBathPoint={placeBath} onBathSelect={id=>{setBathSelected(id);setBathOpen(true);setBathKind(null);setBathMoving(false);}}
+                  bathItems={project.bathItems||[]} bathSelected={bathSelected} bathPlacing={!!bathKind||bathMoving} bathPreview={bathHover} onBathHover={(x,y)=>setBathHover(x===null?null:makeBathPreview(x,y!))} onBathDrag={moveBathDirect} onBathModelStep={dir=>{setBathModelIndex(i=>(i+dir+3)%3);setBathHover(null);}} onBathPoint={placeBath} onBathSelect={id=>{setBathSelected(id);setBathOpen(true);setBathKind(null);setBathMoving(false);}}
                   onDiningSeatsChange={setDiningSeats}
                   diningShape={diningShape}
                   offerSelection={offerSelection}
@@ -3934,19 +3954,19 @@ export default function App() {
               <div
                 role="separator"
                 aria-label="تغییر ارتفاع پلان و روبرو"
-                aria-orientation="horizontal" aria-valuemin={32} aria-valuemax={68}
+                aria-orientation="vertical" aria-valuemin={32} aria-valuemax={68}
                 aria-valuenow={Math.round(topHeightPct)} tabIndex={0}
                 onPointerDown={(e) => {
-                  const height = workspaceRef.current?.clientHeight ?? 0;
+                  const height = workspaceRef.current?.clientWidth ?? 0;
                   if (e.button !== 0 || !height || splitDrag.current) return;
                   e.preventDefault();
                   e.currentTarget.setPointerCapture(e.pointerId);
-                  splitDrag.current = { pointerId: e.pointerId, startY: e.clientY, startPercent: topHeightPct, height };
+                  splitDrag.current = { pointerId: e.pointerId, startY: e.clientX, startPercent: topHeightPct, height };
                 }}
                 onPointerMove={(e) => {
                   const drag = splitDrag.current;
                   if (!drag || drag.pointerId !== e.pointerId) return;
-                  const percent = drag.startPercent + ((e.clientY - drag.startY) / drag.height) * 100;
+                  const percent = drag.startPercent + ((e.clientX - drag.startY) / drag.height) * 100;
                   setTopHeightPct(Math.max(32, Math.min(68, percent)));
                 }}
                 onLostPointerCapture={() => { splitDrag.current = null; }}
@@ -3957,12 +3977,14 @@ export default function App() {
                   e.stopPropagation();
                   setTopHeightPct(percent => e.key === 'Home' ? 50 : Math.max(32, Math.min(68, percent + (e.key === 'ArrowUp' ? -4 : 4))));
                 }}
-                className="h-4 touch-none bg-slate-100 border-y border-slate-300 cursor-row-resize flex items-center justify-center shrink-0 z-20 hover:bg-slate-200 focus-visible:outline-indigo-500"
+                className="w-3 touch-none bg-slate-100 border-x border-slate-300 cursor-col-resize flex items-center justify-center shrink-0 z-20 hover:bg-slate-200 focus-visible:outline-indigo-500"
               >
-                <div className="w-11 h-1 rounded-full bg-slate-400" />
+                <div className="w-1 h-11 rounded-full bg-slate-400" />
               </div>
 
+              <div onPointerEnter={()=>setTopHeightPct(42)} className="flex flex-1 min-w-0 min-h-0 relative overflow-hidden">
               <FrontCanvas
+                tileBrush={brush} onTileStroke={paintWall}
                 tileSettings={project.settings}
                 bathItems={project.bathItems||[]} bathSelected={bathSelected} onBathSelect={id=>{setBathSelected(id);setBathOpen(true);setBathKind(null);setBathMoving(false);}}
                 offerSelection={offerSelection}
@@ -4203,6 +4225,7 @@ export default function App() {
                 }}
                 onToast={showToast}
               />
+              </div></div>
             </>
           )}
             </main>
@@ -4212,7 +4235,7 @@ export default function App() {
 
       {viewMode !== 'ar' && !dialogOpen && (
         <BottomDock
-          wallName={activeWall?.name} onWallTiles={()=>activeWall&&setWallTilesId(activeWall.id)} onBathCatalog={()=>{setBathOpen(v=>!v);setBathKind(null);setBathMoving(false);if(viewMode!=='2d')handleSwitchViewMode('2d');}}
+          wallName={activeWall?.name} onWallTiles={()=>{setBrush(b=>b==='off'?'decor':'off');if(viewMode!=='2d')handleSwitchViewMode('2d');}} bathKind={bathKind} onBathKind={chooseBath}
           onOpenTiles={() => setTilesOpen(true)}
           activeTool={tool}
           diningSeats={diningSeats} diningRotation={diningRotation} furnitureKind={furnitureKind}
@@ -4234,8 +4257,7 @@ export default function App() {
       )}
 
       {bathOpen && viewMode==='2d' && !dialogOpen && <ChidabBathControls kind={bathKind} item={selectedBath} moving={bathMoving} onKind={k=>{setTool('select');setBathSelected(null);setBathMoving(false);setBathKind(k);}} onEdit={editBath} onMove={()=>{setBathMoving(true);setBathKind(null);}} onDelete={()=>{commitState(p=>({...p,bathItems:(p.bathItems||[]).filter(i=>i.id!==bathSelected)}),true);setBathSelected(null);setBathMoving(false);}} onCancel={()=>{setBathKind(null);setBathMoving(false);setBathSelected(null);setBathOpen(false);}}/>}
-      {designWall&&<ChidabWallDesigner key={designWall.id} wall={designWall} settings={project.settings} onClose={()=>setWallTilesId(null)} onApply={d=>{commitState(p=>({...p,walls:p.walls.map(w=>w.id===designWall.id?{...w,tileDesign:d}:w)}),true);setWallTilesId(null);}}/>}
-      {tilesOpen && <ChidabTilePanel settings={project.settings} onClose={()=>setTilesOpen(false)} onApply={value=>{commitState(prev=>({...prev,settings:{...DEFAULT_PROJECT_SETTINGS,...prev.settings,chidabTiles:value}}),true);setTilesOpen(false);}}/>}
+      {briefDialog&&<ChidabBriefDialog mode={briefDialog} brief={project.bathBrief} onClose={()=>setBriefDialog(null)} onApply={brief=>{commitState(p=>({...p,bathBrief:brief}),true);setBriefDialog(null);}}/>}
       {auditOpen && (
         <div role="dialog" aria-modal="true" aria-label="بررسی سلامت کابینت‌ها"
           className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" dir="rtl">

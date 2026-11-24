@@ -31,9 +31,16 @@ export function locateBathItem(item:BathItem,x:number,y:number,walls:Wall[]):Bat
   const xx=bx+nx*dist,yy=by+ny*dist;
   const score=Math.hypot(x-xx,y-yy);
   if(!best||score<best.score)best={score,item:{...item,wallId:w.id,xCm:xx,yCm:yy,rotation:w.angle+(side===1?0:180)}};
- }return best&&best.score<100?best.item:{...item,wallId:undefined,xCm:snap(x),yCm:snap(y)};
+ }return best?best.item:{...item,wallId:undefined,xCm:snap(x),yCm:snap(y)};
 }
 export function bathFits(i:BathItem,walls:Wall[]){
  const a=i.rotation*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
  return [-1,1].every(x=>[-1,1].every(y=>pointInRoom(i.xCm+x*Math.max(0,i.width/2-0.5)*c-y*Math.max(0,i.depth/2-0.5)*s,i.yCm+x*Math.max(0,i.width/2-0.5)*s+y*Math.max(0,i.depth/2-0.5)*c,walls)));
+}
+
+export function bathModel(kind:BathKind,index:number){
+ const base=BATH_CATALOG[kind], n=((index%3)+3)%3;
+ const factors=[1,.82,1.18];
+ const width=Math.round(base.width*factors[n]),depth=Math.round(base.depth*(kind==='mirror'||kind==='glass'?1:factors[n]));
+ return {...base,width,depth,model:n};
 }

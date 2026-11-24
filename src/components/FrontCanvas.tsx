@@ -113,6 +113,8 @@ const HANDLE_STYLE_ORDER = HANDLE_STYLES.map(style => style.id);
 interface FrontCanvasProps {
   bathItems?: import('../cad/types').BathItem[];
   bathSelected?: string|null;
+  tileBrush?: 'off'|'plain'|'decor';
+  onTileStroke?: (keys:string[],decor:boolean)=>void;
   onBathSelect?: (id:string)=>void;
   tileSettings?: import('../cad/types').ProjectSettings;
   offerSelection: OfferSelection;
@@ -364,7 +366,7 @@ type DragOp =
     };
 
 export const FrontCanvas: React.FC<FrontCanvasProps> = ({
-  tileSettings,bathItems=[],bathSelected,onBathSelect,
+  tileSettings,bathItems=[],bathSelected,onBathSelect,tileBrush='off',onTileStroke,
   offerSelection,
   onBeginDrag,
   onCancelDrag,
@@ -476,6 +478,8 @@ export const FrontCanvas: React.FC<FrontCanvasProps> = ({
   const paneRef = useRef<HTMLElement | null>(null);
   const gestureStepperRef = useRef(new PacedGestureStepper());
 
+  const tileStroke=useRef<Set<string>|null>(null);
+  const [paintPreview,setPaintPreview]=useState<string[]>([]);
   const [cursorPt, setCursorPt] = useState<{ x: number; y: number } | null>(null);
   const [hoverClientPt, setHoverClientPt] = useState<{ x: number; y: number } | null>(null);
   const [hoverFinishTarget, setHoverFinishTarget] = useState<
@@ -1339,7 +1343,9 @@ export const FrontCanvas: React.FC<FrontCanvasProps> = ({
     };
   };
 
+  const paintAt=(e:React.PointerEvent<SVGSVGElement>)=>{if(!wall||!tileStroke.current)return;const p=clientToSvg(e.clientX,e.clientY);const x=(p.x-originX)/s,y=(floorY-p.y)/s;const c=wallCells(wall,wallDesign(wall,tileSettings)).find(c=>x>=c.x&&x<=c.x+c.width&&y>=c.y&&y<=c.y+c.height);if(c&&!tileStroke.current.has(c.key)){tileStroke.current.add(c.key);setPaintPreview([...tileStroke.current]);}};
   const handlePointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if(tileBrush!=='off'&&e.button===0){tileStroke.current=new Set();e.currentTarget.setPointerCapture(e.pointerId);paintAt(e);return;}
     const bathId=(e.target as Element).closest('[data-front-bath-id]')?.getAttribute('data-front-bath-id');
     if(e.button===0&&bathId&&tool==='select'){onBathSelect?.(bathId);return;}
     const directPointer = e.pointerType === 'mouse' || e.pointerType === 'pen';
@@ -2396,6 +2402,7 @@ export const FrontCanvas: React.FC<FrontCanvasProps> = ({
   };
 
   const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if(tileStroke.current){paintAt(e);return;}
     if (e.pointerType === 'touch' && activePointersRef.current.size > 1) return;
     if (touchTargetPointer.current === e.pointerId) {
       setTouchTarget({ clientX: e.clientX, clientY: e.clientY });
@@ -2805,6 +2812,7 @@ export const FrontCanvas: React.FC<FrontCanvasProps> = ({
   };
 
   const handlePointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    if(tileStroke.current){onTileStroke?.([...tileStroke.current],tileBrush==='decor');tileStroke.current=null;setPaintPreview([]);return;}
     activePointersRef.current.delete(e.pointerId);
     if (touchTargetPointer.current === e.pointerId) {
       touchTargetPointer.current = null;
@@ -3609,6 +3617,7 @@ export const FrontCanvas: React.FC<FrontCanvasProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={(e) => {
+          tileStroke.current=null;setPaintPreview([]);
           activePointersRef.current.delete(e.pointerId);
           if (touchTargetPointer.current === e.pointerId) {
             touchTargetPointer.current = null;
@@ -3728,13 +3737,13 @@ export const FrontCanvas: React.FC<FrontCanvasProps> = ({
               y={floorY - wallH}
               width={wallW}
               height={wallH}
-              fill={wall.tileDesign ? getChidabTiles(tileSettings).groutColor : "url(#chidab-wall-tiles)"}
+              fill={getChidabTiles(tileSettings).groutColor}
               fillOpacity={1}
               stroke="#cbd5e1"
               strokeWidth={1.5}
               strokeDasharray="6,4"
             />
-            {wall.tileDesign && wallCells(wall,wallDesign(wall,tileSettings)).map(c=><rect key={c.key} x={originX+c.x*s} y={floorY-(c.y+c.height)*s} width={c.width*s} height={c.height*s} fill={c.decor?wall.tileDesign!.decorColor:wall.tileDesign!.color} pointerEvents="none"/>)}
+            {wallCells(wall,wallDesign(wall,tileSettings)).map(c=>{const d=wallDesign(wall,tileSettings);return <rect key={c.key} x={originX+c.x*s} y={floorY-(c.y+c.height)*s} width={c.width*s} height={c.height*s} fill={(paintPreview.includes(c.key)?tileBrush==='decor':c.decor)?d.decorColor:d.color} pointerEvents="none"/>;})}
             <line
               x1={originX - 24}
               y1={floorY}
