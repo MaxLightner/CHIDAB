@@ -510,12 +510,7 @@ export const APPLIANCE_CONFIGS: Record<
   microwave: { label: 'ماکروفر توکار (۶۰cm)', shortLabel: 'ماکروفر', width: 60, depth: 42, heightCm: 38 },
 };
 
-export const APPLIANCE_PLACEABLE_ORDER: ApplianceKind[] = [
-  'dishwasher',
-  'washing',
-  'builtin-oven',
-  'microwave',
-];
+export const APPLIANCE_PLACEABLE_ORDER: ApplianceKind[] = ['washing'];
 
 export const OPENING_DEFAULTS: Record<
   OpeningKind,

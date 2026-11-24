@@ -152,7 +152,7 @@ import { ToolGuideHost } from './components/CursorToolPreview';
 import { TopBar, ViewMode } from './components/TopBar';
 import { WelcomeScreen } from './components/WelcomeScreen';
 
-const STORAGE_KEY = 'cabinet_cad_project_v2';
+const STORAGE_KEY = 'chidab_legacy_project_v1';
 
 function cloneProject(p: ProjectState): ProjectState {
   return JSON.parse(JSON.stringify(p));
@@ -287,7 +287,7 @@ function normalizeProject(raw: ProjectState): ProjectState {
     cabinetFinish: raw.cabinetFinish ?? 'warm-white',
     backsplashFinish: raw.backsplashFinish ?? 'calacatta-marble',
     countertopFinish: raw.countertopFinish ?? 'dark-quartz',
-    skipStylePrompt: raw.skipStylePrompt ?? false,
+    skipStylePrompt: true,
     settings: {
       ...DEFAULT_PROJECT_SETTINGS,
       ...(raw.settings || {}),
@@ -332,7 +332,7 @@ export default function App() {
       const sp = new URLSearchParams(window.location.search);
       if (sp.get('autostart') === '1') return 'editor';
     }
-    return 'welcome';
+    return 'editor';
   });
   const [styleGalleryOpen, setStyleGalleryOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
@@ -456,7 +456,7 @@ export default function App() {
   const [diningShape, setDiningShape] = useState<'round' | 'rect'>('rect');
   const [furnitureKind, setFurnitureKind] = useState<FloorFurnitureKind>('dining');
   const [diningRotation, setDiningRotation] = useState(0);
-  const [applianceKind, setApplianceKind] = useState<ApplianceKind>('dishwasher');
+  const [applianceKind, setApplianceKind] = useState<ApplianceKind>('washing');
   const [hoodKind, setHoodKind] = useState<'hidden' | 'chimney'>(
     () => initialProject.settings?.defaultHoodKind || 'chimney'
   );
@@ -646,6 +646,7 @@ export default function App() {
 
   const handleSelectTool = useCallback(
     (nextTool: ToolId) => {
+      if (!(['select', 'move', 'wall', 'opening', 'eraser'] as ToolId[]).includes(nextTool)) return;
       if (nextTool === 'move') setSelectionMode('single');
       setTool(nextTool);
     },
@@ -2945,10 +2946,10 @@ export default function App() {
   const handleCreateAndOpenProject = useCallback(
     (mode: ViewMode, preset?: PresetMode) => {
       const labelMap: Record<PresetMode, string> = {
-        single: 'آشپزخانه تک‌دیوار',
-        L: 'آشپزخانه L-شکل',
-        U: 'آشپزخانه U-شکل',
-        closet: 'کمد دیواری',
+        single: 'سرویس بهداشتی',
+        L: 'سرویس بهداشتی',
+        U: 'حمام',
+        closet: 'فضای نمونه',
       };
       const name = preset
         ? `${labelMap[preset]} #${projects.length + 1}`
@@ -3126,7 +3127,7 @@ export default function App() {
             'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(rec.state, null, 2));
           const a = document.createElement('a');
           a.setAttribute('href', dataStr);
-          a.setAttribute('download', `${rec.name || 'kichiyar_project'}.json`);
+          a.setAttribute('download', `${rec.name || 'chidab_project'}.json`);
           document.body.appendChild(a);
           a.click();
           a.remove();
@@ -3253,9 +3254,6 @@ export default function App() {
         onOpenWelcome={() => handleExitEditorTo('welcome')}
         isFullscreen={isFullscreen}
         onToggleFullscreen={handleToggleFullscreen}
-        onOpenStyles={() => setStyleGalleryOpen(true)}
-        onSmartDesign={handleSmartDesign}
-        onSmartUnitize={() => handleSmartUnitize(activeBox ? 'box' : 'all')}
         onNewProject={() => handleCreateAndOpenProject('2d')}
         onUndo={handleUndo}
         onRedo={handleRedo}
@@ -3267,7 +3265,6 @@ export default function App() {
           beginTrackedFloorScan();
         }}
         onOpenSettings={() => setSettingsOpen(true)}
-        onAuditKitchen={() => setAuditOpen(true)}
         onExportProject={handleExportProject}
         onImportProject={handleImportProject}
         onEqualizeVertical={handleEqualizeVertical}

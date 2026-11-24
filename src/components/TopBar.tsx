@@ -174,10 +174,10 @@ export const TopBar: React.FC<TopBarProps> = ({
             ) : (
               <div
                 className="h-8 px-2.5 rounded-lg bg-slate-900 text-white text-[13px] font-black tracking-tight inline-flex items-center gap-1.5 shrink-0 select-none"
-                title={`کیچی‌یار • سبک ${designStyle === 'neoclassic' ? 'نئوکلاسیک' : 'مدرن'}`}
+                title={`چیداب • سبک ${designStyle === 'neoclassic' ? 'نئوکلاسیک' : 'مدرن'}`}
               >
-                <span>K</span>
-                <span className="hidden md:inline text-[13px] font-extrabold">کیچی‌یار</span>
+                <span>چ</span>
+                <span className="hidden md:inline text-[13px] font-extrabold">چیداب</span>
               </div>
             )}
             <button

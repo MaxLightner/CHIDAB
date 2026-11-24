@@ -13,10 +13,10 @@ export interface SavedProjectRecord {
   state: ProjectState;
 }
 
-const PROJECTS_LIST_KEY = 'kichiyar_projects_v2';
-const ACTIVE_PROJECT_ID_KEY = 'kichiyar_active_project_id_v2';
-const LEGACY_SINGLE_KEY = 'cabinet_cad_project_v2';
-export const STORAGE_STATUS_EVENT = 'kitchyar-storage-status';
+const PROJECTS_LIST_KEY = 'chidab_projects_v1';
+const ACTIVE_PROJECT_ID_KEY = 'chidab_active_project_id_v1';
+const LEGACY_SINGLE_KEY = 'chidab_legacy_project_v1';
+export const STORAGE_STATUS_EVENT = 'chidab-storage-status';
 let storageFailure: string | null = null;
 let unreadableProjects = false;
 const failedWrites = new Set<string>();
@@ -110,7 +110,7 @@ export function loadProjectsList(): SavedProjectRecord[] {
   const sum = summarizeState(starter);
   const initialRec: SavedProjectRecord = {
     id: uid('proj'),
-    name: 'L-نمونه آشپزخانه',
+    name: 'نمونه سرویس بهداشتی',
     updatedAt: Date.now(),
     preferredMode: '2d',
     wallCount: sum.wallCount,
@@ -202,7 +202,7 @@ export function createProjectRecord(
         cabinetFinish: 'warm-white',
         backsplashFinish: 'calacatta-marble',
         countertopFinish: 'dark-quartz',
-        skipStylePrompt: false,
+        skipStylePrompt: true,
       };
   const sum = summarizeState(state);
   return {

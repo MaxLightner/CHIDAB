@@ -33,7 +33,7 @@ function prepareMaterialJpegs() {
 
 export default defineConfig(() => {
   return {
-    base: '/kitchyar/',
+    base: '/CHIDAB/',
     define: { __BUILD_VERSION__: JSON.stringify(process.env.GITHUB_SHA || `local-${new Date().toISOString()}`) },
     plugins: [
       { name:'prepare-compressed-jpg-materials',

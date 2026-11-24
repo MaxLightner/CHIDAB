@@ -29,11 +29,11 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       <header className="h-14 px-4 sm:px-8 border-b border-slate-200 bg-white flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="h-9 w-9 rounded-xl bg-slate-900 text-white font-black text-base flex items-center justify-center">
-            K
+            چ
           </div>
           <div>
-            <div className="text-sm font-black text-slate-900 leading-tight">کیچی‌یار CAD</div>
-            <div className="text-[13px] font-semibold text-slate-500">طراحی دقیق کابینت و آشپزخانه</div>
+            <div className="text-sm font-black text-slate-900 leading-tight">چیداب</div>
+            <div className="text-[13px] font-semibold text-slate-500">استودیو طراحی حمام و سرویس بهداشتی</div>
           </div>
         </div>
 
@@ -52,21 +52,15 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-8 py-6 sm:py-8 flex flex-col items-center justify-center gap-5">
         <div className="text-center space-y-1.5">
           <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 leading-tight">
-            Kitchiyar
+            CHIDAB
           </h1>
 
           <p className="text-base sm:text-lg font-semibold text-slate-600 leading-relaxed">
-            طراحی هوشمند و مهندسی آشپزخانه
+            محیط طراحی دوبعدی و سه‌بعدی سرویس بهداشتی
           </p>
         </div>
 
-        <div className="w-full max-w-3xl rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
-          <img
-            src="./assets/styles/reference-cream.webp"
-            alt="نمونه آشپزخانه طراحی‌شده در کیچی‌یار"
-            className="w-full h-56 sm:h-72 object-cover"
-          />
-        </div>
+        <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 text-center"><div className="text-4xl font-black tracking-widest text-indigo-700">CHIDAB</div><p className="mt-2 text-slate-500">Studio 0.1 · 2D / 3D / AR</p></div>
 
         <div className="w-full max-w-3xl space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -96,15 +90,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               <span>مدیریت پروژه‌ها ({projectsCount})</span>
             </button>
 
-            <button
-              type="button"
-              data-testid="welcome-styles-btn"
-              onClick={onOpenStyles}
-              className="h-14 px-4 rounded-xl border border-amber-200 bg-amber-50/60 hover:bg-amber-100/70 text-slate-800 text-sm font-black inline-flex items-center justify-center gap-2 transition active:scale-95"
-            >
-              <Palette className="w-4 h-4 text-amber-600" />
-              <span>گالری سبک‌ها و متریال</span>
-            </button>
+            
 
             <button
               type="button"
@@ -125,7 +111,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 <div className="text-[13px] font-bold text-slate-400">آخرین پروژه ذخیره‌شده</div>
                 <div className="text-[14px] font-black text-slate-900 mt-0.5">{latestProject.name}</div>
                 <div className="text-[13px] text-slate-500 mt-0.5">
-                  {latestProject.wallCount} دیوار • {latestProject.boxCount} باکس
+                  {latestProject.wallCount} دیوار
                 </div>
               </div>
               <div className="flex items-center gap-2">
