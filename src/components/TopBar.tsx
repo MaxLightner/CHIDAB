@@ -379,7 +379,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
       </div>
 
-      {(viewMode === '3d' || (viewMode === '2d' && (hasActiveBox || hasSelectedUnit || hasSelectedAppliance))) && (
+      {(viewMode === '2d' && (hasActiveBox || hasSelectedUnit || hasSelectedAppliance)) && (
         <div className="h-9 bg-slate-50 border-t border-slate-200 flex items-center px-2 gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
         {(hasActiveBox || hasSelectedUnit || hasSelectedAppliance) && (
         <div

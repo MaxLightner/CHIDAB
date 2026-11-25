@@ -181,8 +181,8 @@ export function addCeilingFillLights(parent: THREE.Group, outline: FloorPoint[],
     // Position the ceiling fill a full meter above the project ceiling.
     light.position.set(x, heightM - 0.025, z);
     light.lookAt(x, 0, z);
-    const diffuser = new THREE.Mesh(new THREE.PlaneGeometry(light.width, light.height),
-      new THREE.MeshBasicMaterial({ color: 0xfff4e4, side: THREE.DoubleSide }));
+    const diffuser = new THREE.Mesh(new THREE.BoxGeometry(light.width, light.height, .018),
+      new THREE.MeshStandardMaterial({color:0xfff4e4,emissive:0xfff4e4,emissiveIntensity:1.5,roughness:.55}));
     diffuser.position.copy(light.position);
     diffuser.quaternion.copy(light.quaternion);
     parent.add(light, diffuser);

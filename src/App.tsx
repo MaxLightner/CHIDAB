@@ -141,7 +141,7 @@ import { alignSelectedDoorsInBox, equalizeSelectedVerticalWidths, equalizeSelect
 import { copySelection } from './cad/copySelection';
 import { BottomDock } from './components/BottomDock';
 import { ChidabToolbar, ChidabBriefDialog } from './components/ChidabToolbar';
-import { wallDesign,wallCells,getChidabTiles } from './cad/chidabTiles';
+import { wallDesign,wallCells,getChidabTiles,applyChidabStyle } from './cad/chidabTiles';
 import { ChidabBathControls } from './components/ChidabBathControls';
 import { BATH_CATALOG, locateBathItem, bathFits, bathModel } from './cad/chidabEquipment';
 import type { BathKind, BathItem } from './cad/types';
@@ -3321,7 +3321,7 @@ export default function App() {
         cameraToolbarRef={setCameraToolbarHost}
       />
       <ChidabToolbar settings={project.settings} wall={activeWall} brush={brush} onBrush={b=>{setBrush(b);setBathKind(null);setBathMoving(false);setBathHover(null);setTool('select');if(viewMode!=='2d')handleSwitchViewMode('2d');}} onSettings={value=>commitState(p=>({...p,settings:{...DEFAULT_PROJECT_SETTINGS,...p.settings,chidabTiles:value},walls:p.walls.map(w=>w.id===activeWall?.id&&w.tileDesign?{...w,tileDesign:{...w.tileDesign,groutMm:value.groutMm}}:w)}),true)} onWallDesign={patch=>{if(activeWall)commitState(p=>({...p,walls:p.walls.map(w=>w.id===activeWall.id?{...w,tileDesign:{...wallDesign(w,p.settings),...patch}}:w)}),true);}} onSmart={smartTiles} onStyle={()=>setBriefDialog('style')} onWizard={()=>setBriefDialog('wizard')}/>
-      <div className="text-xs text-slate-500 px-2 text-left" dir="ltr">CHIDAB 0.22</div>
+      <div className="text-xs text-slate-500 px-2 text-left" dir="ltr">CHIDAB 0.23</div>
       </div>
 
       <div hidden={dialogOpen || ((tool === 'select' || tool === 'move') && !toast)} className="shrink-0 border-b border-slate-200 bg-slate-50">
@@ -3528,7 +3528,7 @@ export default function App() {
                 frontCutOrient={frontCutOrient}
                 onFrontCutOrient={setFrontCutOrient}
                 onFrontCut={cutFront}
-              cameraToolbarHost={viewMode === '3d' ? cameraToolbarHost : null}
+              cameraToolbarHost={null}
               diningSeats={diningSeats} diningRotation={diningRotation} furnitureKind={furnitureKind}
               onPlaceDining={placeDining} onMoveDining={moveDining}
               onSelectDining={selectDining} onDeleteDining={deleteDining}
@@ -4259,7 +4259,7 @@ export default function App() {
       )}
 
       {bathOpen && viewMode==='2d' && !dialogOpen && <ChidabBathControls kind={bathKind} item={selectedBath} moving={bathMoving} onKind={k=>{setTool('select');setBathSelected(null);setBathMoving(false);setBathKind(k);}} onEdit={editBath} onMove={()=>{setBathMoving(true);setBathKind(null);}} onDelete={()=>{commitState(p=>({...p,bathItems:(p.bathItems||[]).filter(i=>i.id!==bathSelected)}),true);setBathSelected(null);setBathMoving(false);}} onCancel={()=>{setBathKind(null);setBathMoving(false);setBathSelected(null);setBathOpen(false);setBathHover(null);}}/>}
-      {briefDialog&&<ChidabBriefDialog mode={briefDialog} brief={project.bathBrief} onClose={()=>setBriefDialog(null)} onApply={brief=>{commitState(p=>({...p,bathBrief:brief}),true);setBriefDialog(null);}}/>}
+      {briefDialog&&<ChidabBriefDialog mode={briefDialog} brief={project.bathBrief} onClose={()=>setBriefDialog(null)} onApply={brief=>{commitState(p=>briefDialog==='style'?applyChidabStyle(p,brief):({...p,bathBrief:brief}),true);setBriefDialog(null);}}/>}
       {auditOpen && (
         <div role="dialog" aria-modal="true" aria-label="بررسی سلامت کابینت‌ها"
           className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" dir="rtl">

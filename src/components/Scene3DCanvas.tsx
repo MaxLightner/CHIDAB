@@ -731,6 +731,7 @@ export const Scene3DCanvas: React.FC<Scene3DCanvasProps> = (props) => {
         if (controls.update()) needsRender = true;
       }
       if (built) {
+        if(!ar?.active){const height=(propsRef.current.project.settings?.wallHeightCm??propsRef.current.project.walls[0]?.height??220)*.01;for(const g of built.root.children.filter(g=>g.userData.chidabCeiling)){const visible=camera.position.y<height-.04;if(g.visible!==visible){g.visible=visible;needsRender=true;}}}
         const groups=built.root.children.filter(g=>g.userData.chidabWallId);
         const walls=propsRef.current.project.walls;
         const cx=walls.length?walls.reduce((n,w)=>n+(w.x1Cm+w.x2Cm)*.005,0)/walls.length:0;

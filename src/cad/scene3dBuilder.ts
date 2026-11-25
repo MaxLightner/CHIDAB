@@ -940,6 +940,15 @@ export function buildKitchen3DScene(
   const ceilingIntensity = project.settings?.ceilingAreaIntensity ??
     (project.settings?.ceilingLightIntensities?.[0] ?? 12);
   const ceilingControls = addCeilingFillLights(root, vertices, ceilingHeightM, ceilingIntensity);
+  // Ceiling is a real architectural surface. Keep existing lights and their settings untouched.
+  if(vertices.length>=3){
+    const shape=new THREE.Shape();shape.moveTo(vertices[0].x*CM,-vertices[0].y*CM);
+    for(const v of vertices.slice(1))shape.lineTo(v.x*CM,-v.y*CM);
+    shape.closePath();
+    const geo=new THREE.ExtrudeGeometry(shape,{depth:.08,bevelEnabled:false});geo.rotateX(-Math.PI/2);
+    const ceiling=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0xf5f4f0,roughness:.94}));
+    ceiling.position.y=ceilingHeightM;ceiling.userData.chidabCeiling=true;ceiling.receiveShadow=true;ceiling.castShadow=false;root.add(ceiling);
+  }
   const kitchenLightMode = getKitchenCabinetLightMode(project);
 
   const stripMaterial = new THREE.MeshBasicMaterial({ color: 0xffdfb6 });
@@ -1340,7 +1349,8 @@ export function buildKitchen3DScene(
   // Preliminary CHIDAB fixtures; independent of kitchen cabinetry.
   for(const item of project.bathItems||[]){
     const g=new THREE.Group();const w=item.width*CM,d=item.depth*CM,h=item.height*CM;
-    const material=new THREE.MeshStandardMaterial({color:BATH_CATALOG[item.kind].color,roughness:.35,transparent:item.kind==='glass',opacity:item.kind==='glass'?.28:1});
+    const material=new THREE.MeshStandardMaterial({color:item.kind==='mirror'?0xffffff:BATH_CATALOG[item.kind].color,roughness:item.kind==='mirror'?.005:.35,metalness:item.kind==='mirror'?1:0,envMapIntensity:item.kind==='mirror'?1:1,transparent:item.kind==='glass',opacity:item.kind==='glass'?.28:1});
+    if(item.kind==='mirror')material.userData.chidabMirror=true;
     const box=(ww:number,hh:number,dd:number,x:number,y:number,z:number)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(ww,hh,dd),material);m.position.set(x,y,z);m.castShadow=item.kind!=='glass';m.receiveShadow=true;g.add(m);};
     const oval=(ww:number,hh:number,dd:number,y:number,z:number)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),material);m.scale.set(ww/2,hh/2,dd/2);m.position.set(0,y,z);m.castShadow=true;g.add(m);};
     if(item.kind==='toilet'){if(item.model===1){oval(w,h*.52,d*.78,h*.55,d*.10);box(w*.75,h*.3,d*.28,0,h*.58,-d*.32);}else{box(w*.65,h*.65,d*.3,0,h*.62,-d*.30);oval(w,h*.48,d*.72,h*.24,d*.10);}}
@@ -1365,7 +1375,7 @@ export function buildKitchen3DScene(
       if (material instanceof THREE.MeshStandardMaterial) sceneMaterials.add(material);
     }
   });
-  sceneMaterials.forEach(limitKitchenHdrIrradiance);
+  sceneMaterials.forEach(m=>{if(!m.userData.chidabMirror)limitKitchenHdrIrradiance(m);});
 
   // Cache direct references so changing a light never reconstructs cabinets or geometry.
   const ovenParts = new Map<string, { light?: THREE.PointLight; cavity?: THREE.MeshStandardMaterial; glass?: THREE.MeshPhysicalMaterial }>();

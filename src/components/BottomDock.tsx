@@ -56,14 +56,13 @@ export const BottomDock: React.FC<BottomDockProps> = ({ activeTool, onSelectTool
     { id: 'wall', label: 'دیوار', Icon: BrickWall },
     { id: 'opening', label: 'در / پنجره / ستون', Icon: AppWindow },
   ];
-  return <div data-testid="bottom-dock" className="relative shrink-0 z-30 bg-white border-t border-slate-200">
-    <nav aria-label="ابزارهای معماری" className="h-12 flex items-center justify-start gap-2 px-2 overflow-x-auto">
-      {tools.map(({id,label,Icon}) => <button key={id} type="button" onClick={() => onSelectTool(id)}
-        aria-pressed={activeTool === id} className={'h-10 px-3 rounded-lg border font-bold inline-flex items-center gap-2 whitespace-nowrap '+(activeTool===id?'bg-indigo-600 text-white':'bg-white text-slate-800')}>
-        <Icon className="w-4 h-4"/><span>{label}</span>
+  const entries=[...tools.map(({id,label,Icon})=>({key:id,label: id==='opening'?'بازشو':label,Icon,active:activeTool===id&&!bathKind,action:()=>onSelectTool(id)})),...Object.entries(BATH_CATALOG).map(([key,c])=>({key,label:c.label,Icon:undefined,active:bathKind===key,action:()=>onBathKind?.(key as BathKind)})),...(wallName?[{key:'tiles',label:'طراحی کاشی',Icon:undefined,active:false,action:()=>onWallTiles?.()}]:[])];
+  return <div data-testid="bottom-dock" className="shrink-0 z-30 bg-white border-t border-slate-200 px-1 py-1" dir="rtl">
+    <nav aria-label="ابزارهای معماری و تجهیزات" className="grid grid-flow-col grid-rows-2 auto-cols-fr gap-1 w-full">
+      {entries.map(({key,label,Icon,active,action})=><button key={key} type="button" title={label} aria-pressed={active} onClick={action}
+        className={'min-w-0 min-h-8 rounded px-0.5 py-1 leading-tight text-[11px] sm:text-[13px] font-semibold flex items-center justify-center gap-1 text-center '+(active?'bg-indigo-600 text-white':'bg-slate-50 text-slate-800 hover:bg-slate-100')}>
+        {Icon&&<Icon className="w-3.5 h-3.5 shrink-0"/>}<span className="min-w-0 break-words">{label}</span>
       </button>)}
-      {Object.entries(BATH_CATALOG).map(([key,c])=><button key={key} type="button" onClick={()=>onBathKind?.(key as BathKind)} className={'h-10 shrink-0 px-3 rounded border font-bold whitespace-nowrap '+(bathKind===key?'bg-indigo-600 text-white':'bg-white')}>{c.label}</button>)}
-      {wallName&&<button type="button" onClick={onWallTiles} className="h-10 px-3 rounded bg-indigo-600 text-white font-bold whitespace-nowrap">طراحی کاشی · {wallName}</button>}
     </nav>
   </div>;
 };
